@@ -1,5 +1,5 @@
 import pandas as pd
-
+import nltk
 
 def read_crew_data():
     df = pd.read_csv("data/crew-data.csv")
