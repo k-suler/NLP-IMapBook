@@ -1,6 +1,7 @@
 import pandas as pd
 import nltk
 import string
+import contractions
 
 nltk.download("punkt")
 nltk.download('wordnet')
@@ -17,6 +18,7 @@ def preprocess_data():
     df['lemas'] = (
         df["Message"]
         .str.lower()
+        .apply(contractions.fix)
         .apply(
             lambda s: s.translate(
                 str.maketrans({key: None for key in string.punctuation})
@@ -25,6 +27,7 @@ def preprocess_data():
         .apply(nltk.word_tokenize)
         .apply(lambda tokens: [lemmatizer.lemmatize(token) for token in tokens])
     )
+    df['joined_lemas'] = df['lemas'].apply(" ".join)
     return df
 
 
