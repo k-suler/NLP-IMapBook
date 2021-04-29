@@ -8,9 +8,10 @@ def read_crew_data():
 
 def preprocess_data():
     df = read_crew_data()
-
     df['Message'] = df['Message'].str.lower()
     print(df['Message'])
+
+
 
 
 preprocess_data()
