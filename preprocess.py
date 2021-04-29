@@ -27,6 +27,7 @@ def preprocess_data():
         .apply(nltk.word_tokenize)
         .apply(lambda tokens: [lemmatizer.lemmatize(token) for token in tokens])
     )
+    df['joined_lemas'] = df['lemas'].apply(" ".join)
     return df
 
 
