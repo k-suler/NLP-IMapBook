@@ -1,36 +1,56 @@
+
+from sklearn.linear_model import SGDClassifier, LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+
+import utils
 from preprocess import preprocess_data
 from utils import split_train_test
 from feature_extraction import tfidf_features, bag_of_words_features
-from baseline_models import NaiveBayes, LinearSVM, PopularityModel, RandomModel
+from baseline_models import NaiveBayes, LinearSVM, PopularityModel, RandomModel, Model
 import warnings
+from bcolors import BLUE, ENDC
 
 warnings.filterwarnings("ignore")
 
-nb = NaiveBayes()
-svm = LinearSVM()
 pm = PopularityModel()
 rm = RandomModel()
 
 
-def tfidf(X_train, X_test, y_train, y_test):
+def tfidf(data, X_train, X_test, y_train, y_test):
     # word level TF-IDF
     X_train, X_test = tfidf_features(X_train['joined_lemas'].tolist(), X_test['joined_lemas'].tolist())
 
-    # Naive Bayes model
-    accuracy_nb, report_nb = nb.evaluate(X_train, y_train, X_test, y_test)
-    print(accuracy_nb)
-    print(report_nb)
+    print(f"{BLUE} Starting with Naive Bayes classifier {ENDC}")
+    nb = Model("Naive Bayes", MultinomialNB())
+    nb.evaluate(X_train, y_train, X_test, y_test)
 
-    accuracy_svm, report_svm = svm.evaluate(X_train, y_train, X_test, y_test)
-    print(accuracy_svm)
-    print(report_svm)
+    X, y = tfidf_features(data['joined_lemas'], data[utils.col_to_predict])
+    nb.kfold(X, data[utils.col_to_predict])
+    nb.loocv(X, data[utils.col_to_predict])
+
+    print(f"{BLUE} Starting with Support Vector Machine classifier {ENDC}")
+    svm = Model("Support Vector Machine", SGDClassifier())
+    svm.evaluate(X_train, y_train, X_test, y_test)
+
+    X, y = tfidf_features(data['joined_lemas'], data[utils.col_to_predict])
+    svm.kfold(X, data[utils.col_to_predict])
+    svm.loocv(X, data[utils.col_to_predict])
+
+    # print(f"{BLUE} Starting with Popularity classifier {ENDC}")
+    # pm.evaluate(X_train, y_train, X_test, y_test)
+    #
+    # print(f"{BLUE} Starting with Random classifier {ENDC}")
+    # rm.evaluate(X_train, y_train, X_test, y_test)
 
 
 if __name__ == "__main__":
     data = preprocess_data()
-    X_train, X_test, y_train, y_test = split_train_test(data)
+    X_train, X_test, y_train, y_test = split_train_test(data, x_col='joined_lemas')
 
-    tfidf(X_train, X_test, y_train, y_test)
+    tfidf(data, X_train, X_test, y_train, y_test)
+
 
 
 
