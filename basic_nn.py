@@ -28,7 +28,7 @@ def tfidf_features(txt, flag):
     return x
 
 
-use_tfidf = False
+use_tfidf = True
 
 data = preprocess_data()
 X_train, X_test, Y_train, Y_test = split_train_test(data, x_col="joined_lemas")
