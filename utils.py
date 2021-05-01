@@ -20,7 +20,7 @@ def split_train_test(df, x_col='lemas'):
     X = df[[x_col]]
     y = df[[col_to_predict]]
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42
+        X, y, test_size=0.25, random_state=42, shuffle=True, stratify=y
     )
     return X_train, X_test, y_train, y_test
 
