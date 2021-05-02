@@ -7,6 +7,7 @@ import pandas as pd
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Activation, Dense
 from keras.models import Sequential, load_model
+from keras.utils import plot_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from tensorflow import keras
@@ -15,9 +16,6 @@ from evaluation import Evaluator
 from feature_extraction import bag_of_words_features
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
-from keras.utils import plot_model
-
-tfidf = TfidfVectorizer(binary=True, stop_words="english", max_df=0.5, min_df=2)
 
 
 class NN:
@@ -107,7 +105,7 @@ class NN:
                 optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
             )
         else:
-            raise "Unsupported model type"
+            raise Exception("Unsupported model type")
         self.model = model
 
     def set_type(self, type):
@@ -165,7 +163,7 @@ class NN:
 
     def evaluate(self, X_test, Y_test):
         if not self.model:
-            raise "Load or fit new model first"
+            raise Exception("Load or fit new model first")
 
         score, acc = self.model.evaluate(X_test, Y_test, batch_size=3)
         print("Test accuracy:", acc)
@@ -181,6 +179,9 @@ class NN:
 
     def plot_model(self):
         plot_model(self.model, to_file="model.png", show_shapes=True)
+
+
+tfidf = TfidfVectorizer(binary=True, stop_words="english", max_df=0.5, min_df=2)
 
 
 def tfidf_features(txt, flag):
