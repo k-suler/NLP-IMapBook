@@ -1,11 +1,16 @@
+import numpy as np
+from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from feature_extraction import *
+from preprocess import preprocess_data
+from utils import split_train_test
+import scipy.sparse as sp
 
 
 def bag_of_words_features(train_data, test_data, max_features=2000, binary=False):
     """Return features using bag of words"""
-    vectorizer = CountVectorizer(
-        binary=binary, max_df=0.6, min_df=2, stop_words="english"
-    )
+    vectorizer = CountVectorizer(ngram_range=(1, 3), min_df=3, stop_words='english', binary=binary)
+
     X_train = vectorizer.fit_transform(train_data)
 
     X_train = X_train.astype("float16")
@@ -15,16 +20,47 @@ def bag_of_words_features(train_data, test_data, max_features=2000, binary=False
     return X_train, X_test
 
 
-def tfidf_features(train_data, test_data, max_df=0.5):
+def tfidf_features(train_data, test_data):
     """Return features using TFIDF"""
     vectorizer = TfidfVectorizer(
-        analyzer="word",
-        max_features=200000,
         token_pattern=r"\w{1,}",
+        min_df=0.2,
+        max_df=0.8,
         use_idf=True,
-        sublinear_tf=True,
-        ngram_range=(1, 2),
+        binary=True,
+        ngram_range=(1, 3)
     )
     X_train = vectorizer.fit_transform(train_data)
     X_test = vectorizer.transform(test_data)
     return X_train, X_test
+
+
+def custom_features(train_data, test_data):
+    v = DictVectorizer()
+    features = None
+    for i, tokens_in_doc in enumerate(train_data):
+        if len(tokens_in_doc) > 0:
+            lengths = list(map(len, tokens_in_doc))
+            feature = np.hstack((len(tokens_in_doc), max(lengths), min(lengths), sum(lengths) / len(lengths)))
+            if i == 0:
+                features = feature
+            else:
+                features = np.vstack((features, feature))
+
+    joined_train_data = train_data["lemas"].apply(" ".join)
+    joined_test_data = test_data["lemas"].apply(" ".join)
+
+    vectorizer1 = CountVectorizer(min_df=2, ngram_range=(1, 2))
+    bow_count = vectorizer1.fit_transform(joined_train_data)
+    bow_transform = vectorizer1.transform(joined_test_data)
+
+    vectorizer2 = TfidfVectorizer()
+    pos_tfidf = vectorizer2.fit_transform(joined_train_data)
+    tfidf_transform = vectorizer1.transform(joined_test_data)
+
+    X_train = sp.vstack((bow_count, pos_tfidf, v.fit_transform(features)))
+    X_test = sp.vstack((bow_transform, tfidf_transform, v.transform(features)))
+    return X_train, X_test
+
+
+
