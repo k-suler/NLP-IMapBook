@@ -4,7 +4,7 @@ import string
 import contractions
 
 nltk.download("punkt")
-nltk.download('wordnet')
+nltk.download("wordnet")
 
 
 def read_crew_data():
@@ -29,13 +29,19 @@ def preprocess_data():
     #     .apply(lambda tokens: [lemmatizer.lemmatize(token) for token in tokens])
     # )
 
-    df['tokens'] = df["Message"].str.lower().apply(contractions.fix).str.split(" ")
-    df['tokens'] = df['tokens'].apply(lambda tokens: [x.translate(str.maketrans({key: None for key in string.punctuation})) if x not in emoticons else x for x in tokens])
-    df['lemas'] = df['tokens'].apply(lambda tokens: [lemmatizer.lemmatize(token) for token in tokens])
+    df["tokens"] = df["Message"].str.lower().apply(contractions.fix).str.split(" ")
+    df["tokens"] = df["tokens"].apply(
+        lambda tokens: [
+            x.translate(str.maketrans({key: None for key in string.punctuation}))
+            if x not in emoticons
+            else x
+            for x in tokens
+        ]
+    )
+    df["lemas"] = df["tokens"].apply(
+        lambda tokens: [lemmatizer.lemmatize(token) for token in tokens]
+    )
 
-    df['joined_lemas'] = df['lemas'].apply(" ".join)
-    df['joined_lemas'] = df['joined_lemas'].str.strip()
+    df["joined_lemas"] = df["lemas"].apply(" ".join)
+    df["joined_lemas"] = df["joined_lemas"].str.strip()
     return df
-
-
-

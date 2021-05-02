@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
 from keras.utils import np_utils
 
-col_to_predict = 'CodePreliminary'
+col_to_predict = "CodePreliminary"
 
 
 def get_classes(df):
@@ -15,7 +15,7 @@ def get_classes(df):
     return classes
 
 
-def split_train_test(df, x_col='lemas'):
+def split_train_test(df, x_col="lemas"):
     """Split the data to train and test set"""
     X = df[[x_col]]
     y = df[[col_to_predict]]

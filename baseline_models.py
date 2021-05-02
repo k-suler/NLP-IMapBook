@@ -1,8 +1,21 @@
 import numpy as np
 import pandas as pd
 from sklearn import metrics
-from sklearn.metrics import roc_auc_score, make_scorer, accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import KFold, cross_val_predict, cross_val_score, LeaveOneOut, GridSearchCV
+from sklearn.metrics import (
+    roc_auc_score,
+    make_scorer,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+)
+from sklearn.model_selection import (
+    KFold,
+    cross_val_predict,
+    cross_val_score,
+    LeaveOneOut,
+    GridSearchCV,
+)
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
@@ -15,13 +28,12 @@ from feature_extraction import tfidf_features
 evaluator = Evaluator()
 
 
-class PopularityModel():
-
+class PopularityModel:
     def name(self):
         return "Popularity model"
 
     def get_most_representative_class(self, Y_train):
-        """ Return most representative class """
+        """Return most representative class"""
         item_counts = Y_train[utils.col_to_predict].value_counts()
         most_reprenetative = item_counts.idxmax()
         return most_reprenetative
@@ -37,13 +49,12 @@ class PopularityModel():
         evaluator.classification_report(Y_test, preds)
 
 
-class RandomModel():
-
+class RandomModel:
     def name(self):
         return "Random model"
 
     def get_random_class(self, X_train):
-        """ Return random class """
+        """Return random class"""
         classes = utils.get_classes(X_train)
         return random.choice(classes)
 
@@ -57,8 +68,7 @@ class RandomModel():
         evaluator.classification_report(Y_test, preds)
 
 
-class NaiveBayes():
-
+class NaiveBayes:
     def name(self):
         return "Naive Bayes"
 
@@ -83,8 +93,7 @@ class NaiveBayes():
         return auc, class_report
 
 
-class LinearSVM():
-
+class LinearSVM:
     def name(self):
         return "Linear Support Vector Machine"
 
@@ -105,8 +114,7 @@ class LinearSVM():
         return auc, class_report
 
 
-class Model():
-
+class Model:
     def __init__(self, model_name, model):
         self.model_name = model_name
         self.model = model
@@ -124,7 +132,7 @@ class Model():
         return preds
 
     def kfold(self, data):
-        """ K-fold cross validation - train the model k times"""
+        """K-fold cross validation - train the model k times"""
         model = self.model
         # model.fit(data, data[utils.col_to_predict])
         # preds = cross_val_predict(model, data, target, cv=10)
@@ -142,12 +150,14 @@ class Model():
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
 
-            f1.append(metrics.f1_score(ytest, y_predicted, average='weighted'))
-            recall.append(metrics.recall_score(ytest, y_predicted, average='weighted'))
+            f1.append(metrics.f1_score(ytest, y_predicted, average="weighted"))
+            recall.append(metrics.recall_score(ytest, y_predicted, average="weighted"))
             acc.append(metrics.accuracy_score(ytest, y_predicted))
 
-        print(f"10-FOLD - Accuracy: {round(np.mean(acc), 3)}, "
-              f"Recall: {round(np.mean(recall), 3)}, F1-score: {round(np.mean(f1), 3)}")
+        print(
+            f"10-FOLD - Accuracy: {round(np.mean(acc), 3)}, "
+            f"Recall: {round(np.mean(recall), 3)}, F1-score: {round(np.mean(f1), 3)}"
+        )
 
     def loocv(self, data):
         """Leave one out cross validation - train the model n times (n = number of values in the data)"""
@@ -166,29 +176,31 @@ class Model():
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
 
-            f1.append(metrics.f1_score(ytest, y_predicted, average='weighted'))
-            recall.append(metrics.recall_score(ytest, y_predicted, average='weighted'))
+            f1.append(metrics.f1_score(ytest, y_predicted, average="weighted"))
+            recall.append(metrics.recall_score(ytest, y_predicted, average="weighted"))
             acc.append(metrics.accuracy_score(ytest, y_predicted))
 
-        print(f"LOOCV - Accuracy: {round(np.mean(acc), 3)}, "
-              f"Recall: {round(np.mean(recall), 3)}, F1-score: {round(np.mean(f1), 3)}")
-
+        print(
+            f"LOOCV - Accuracy: {round(np.mean(acc), 3)}, "
+            f"Recall: {round(np.mean(recall), 3)}, F1-score: {round(np.mean(f1), 3)}"
+        )
 
     def find_best_parameters(self, X_train, Y_train):
         model = self.model
         model.fit(X_train, Y_train)
-        print('Best score for training data:', model.best_score_,"\n")
+        print("Best score for training data:", model.best_score_, "\n")
 
         # View the best parameters for the model found using grid search
-        print('Best C:',model.best_estimator_.C,"\n")
-        print('Best Kernel:',model.best_estimator_.kernel,"\n")
-        print('Best Gamma:',model.best_estimator_.gamma,"\n")
+        print("Best C:", model.best_estimator_.C, "\n")
+        print("Best Kernel:", model.best_estimator_.kernel, "\n")
+        print("Best Gamma:", model.best_estimator_.gamma, "\n")
 
-        return model.best_score_, \
-               model.best_estimator_.C,\
-               model.best_estimator_.kernel, \
-               model.best_estimator_.gamma
-
+        return (
+            model.best_score_,
+            model.best_estimator_.C,
+            model.best_estimator_.kernel,
+            model.best_estimator_.gamma,
+        )
 
     def evaluate(self, X_train, Y_train, X_test, Y_test):
         model = self.train(X_train, Y_train)
@@ -197,4 +209,3 @@ class Model():
         evaluator.classification_report(Y_test, preds)
         evaluator.confusion_matrix(Y_test, preds)
         return model
-
