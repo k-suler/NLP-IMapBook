@@ -13,7 +13,7 @@ from sklearn.preprocessing import LabelEncoder
 from tensorflow import keras
 
 from evaluation import Evaluator
-from feature_extraction import bag_of_words_features
+from feature_extraction import bag_of_words_features, tfidf_features
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
 
@@ -200,7 +200,7 @@ class NN:
 tfidf = TfidfVectorizer(binary=True, stop_words="english", max_df=0.5, min_df=2)
 
 
-def tfidf_features(txt, flag):
+def tfidf_features_my(txt, flag):
     if flag == "train":
         x = tfidf.fit_transform(txt)
     else:
@@ -211,7 +211,7 @@ def tfidf_features(txt, flag):
 
 if __name__ == "__main__":
     data = preprocess_data()
-    X_train, X_test, Y_train, Y_test = split_train_test(data, x_col="joined_lemas")
+    X_train, X_test, Y_train, Y_test = split_train_test(data, x_col="lemas")
     Y_test_classes = Y_test
 
     lb = LabelEncoder()
@@ -223,17 +223,21 @@ if __name__ == "__main__":
 
     use_tfidf = True
     if use_tfidf:
-        X_train = tfidf_features(X_train["joined_lemas"].tolist(), flag="train")
-        X_test = tfidf_features(X_test["joined_lemas"].tolist(), flag="test")
-
+        # X_train = tfidf_features(X_train["joined_lemas"].tolist())
+        # X_test = tfidf_features(X_test["joined_lemas"].tolist())
+        X_train, X_test = tfidf_features(
+            X_train,
+            X_test,
+            binary=True,
+        )
         # X_train = X_train[:, :, None]
         # X_test = X_test[:, :, None]
         # X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
         # X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
     else:
         X_train, X_test = bag_of_words_features(
-            X_train["joined_lemas"].tolist(),
-            X_test["joined_lemas"].tolist(),
+            X_train,
+            X_test,
             binary=True,
         )
 
