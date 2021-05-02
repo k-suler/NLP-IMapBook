@@ -44,6 +44,47 @@ def tfidf_features(train_data, test_data, binary=False):
     return X_train, X_test
 
 
+def bag_of_words_features_1(train_data, test_data, max_features=2000, binary=False, kfold=False):
+    """Return features using bag of words"""
+    vectorizer = CountVectorizer(ngram_range=(1, 3), stop_words='english', binary=binary)
+
+    if not kfold:
+        joined_train_data = train_data["lemas"].apply(" ".join)
+        joined_test_data = test_data["lemas"].apply(" ".join)
+    else:
+        joined_train_data = train_data
+        joined_test_data = test_data
+
+    X_train = vectorizer.fit_transform(joined_train_data)
+
+    X_train = X_train.astype("float16")
+    X_test = vectorizer.transform(joined_test_data)
+
+    X_test = X_test.astype("float16")
+    return X_train, X_test
+
+
+def tfidf_features_1(train_data, test_data, kfold):
+    """Return features using TFIDF"""
+    if not kfold:
+        joined_train_data = train_data["lemas"].apply(" ".join)
+        joined_test_data = test_data["lemas"].apply(" ".join)
+    else:
+        joined_train_data = train_data
+        joined_test_data = test_data
+    vectorizer = TfidfVectorizer(
+        analyzer='word',
+        max_features=200000,
+        token_pattern=r"\w{1,}",
+        use_idf=True,
+        sublinear_tf=True,
+        ngram_range=(1, 2)
+    )
+    X_train = vectorizer.fit_transform(joined_train_data)
+    X_test = vectorizer.transform(joined_test_data)
+    return X_train, X_test
+
+
 def count_words(tokens):
     return len(tokens)
 
