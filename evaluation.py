@@ -1,13 +1,12 @@
 from sklearn import metrics
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, roc_curve, auc
 from matplotlib import pyplot as plt
 
-class Evaluator():
+import preprocess
+import utils
 
-    def auc_roc_score(self, model, Y_test, preds):
-        """Return AUC value"""
-        roc_auc_value = roc_auc_score(Y_test, preds)
-        print(f"AUC value is {roc_auc_value}")
+
+class Evaluator():
 
     def accuracy(self, Y_test, preds):
         auc = metrics.accuracy_score(preds, Y_test)
@@ -25,13 +24,14 @@ class Evaluator():
         precision = metrics.precision_score(Y_test, preds, average='weighted')
         recall = metrics.recall_score(Y_test, preds, average='weighted')
         f1_score = metrics.f1_score(Y_test, preds, average='weighted')
-        print(f"Precision: {round(precision, 2)}, "
-              f"recall: {round(recall, 2)}, "
-              f"F1-score: {round(f1_score, 2)}")
+        print(f"Precision: {round(precision, 3)}, "
+              f"recall: {round(recall, 3)}, "
+              f"F1-score: {round(f1_score, 3)}")
         return cm
 
     def feature_importance(self, model, classes):
         """Return feature importance - value below zero means that the feature is not important"""
+        print(model.feature_importances_)
         imp = model.coef_[0]
         imp, names = zip(*sorted(zip(imp, classes)))
         plt.rcParams["figure.figsize"] = (15, 10)
