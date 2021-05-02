@@ -9,7 +9,9 @@ import scipy.sparse as sp
 
 def bag_of_words_features(train_data, test_data, max_features=2000, binary=False):
     """Return features using bag of words"""
-    vectorizer = CountVectorizer(ngram_range=(1, 3), min_df=3, stop_words='english', binary=binary)
+    vectorizer = CountVectorizer(
+        ngram_range=(1, 3), min_df=3, stop_words='english', binary=binary
+    )
 
     joined_train_data = train_data["lemas"].apply(" ".join)
     joined_test_data = test_data["lemas"].apply(" ".join)
@@ -23,7 +25,7 @@ def bag_of_words_features(train_data, test_data, max_features=2000, binary=False
     return X_train, X_test
 
 
-def tfidf_features(train_data, test_data):
+def tfidf_features(train_data, test_data, binary=False):
     """Return features using TFIDF"""
     joined_train_data = train_data["lemas"].apply(" ".join)
     joined_test_data = test_data["lemas"].apply(" ".join)
@@ -32,11 +34,13 @@ def tfidf_features(train_data, test_data):
         min_df=0.2,
         max_df=0.8,
         use_idf=True,
-        binary=True,
-        ngram_range=(1, 3)
+        binary=binary,
+        ngram_range=(1, 3),
     )
     X_train = vectorizer.fit_transform(joined_train_data)
+    X_train = X_train.astype("float16")
     X_test = vectorizer.transform(joined_test_data)
+    X_test = X_test.astype("float16")
     return X_train, X_test
 
 
@@ -58,8 +62,11 @@ def custom_features(train_data, test_data):
     first = True
     for i, tokens in enumerate(train_data):
         if len(tokens) > 0:
-            item = {"count_words": count_words(tokens), "longest_word": longest_word(tokens),
-                    "shortest_word": shortest_word(tokens)}
+            item = {
+                "count_words": count_words(tokens),
+                "longest_word": longest_word(tokens),
+                "shortest_word": shortest_word(tokens),
+            }
             features.append(item)
 
     # joined_train_data = train_data["lemas"].apply(" ".join)
