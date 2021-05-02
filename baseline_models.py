@@ -23,7 +23,7 @@ from sklearn.svm import SVC
 import utils
 import random
 from evaluation import Evaluator
-from feature_extraction import tfidf_features
+from feature_extraction import tfidf_features_1, bag_of_words_features_1
 
 evaluator = Evaluator()
 
@@ -47,6 +47,7 @@ class PopularityModel:
         preds = np.array(preds)
         evaluator.accuracy(Y_test, preds)
         evaluator.classification_report(Y_test, preds)
+        evaluator.confusion_matrix(Y_test, preds)
 
 
 class RandomModel:
@@ -66,6 +67,7 @@ class RandomModel:
         preds = np.array(preds)
         evaluator.accuracy(Y_test, preds)
         evaluator.classification_report(Y_test, preds)
+        evaluator.confusion_matrix(Y_test, preds)
 
 
 class NaiveBayes:
@@ -131,7 +133,7 @@ class Model:
         preds = model.predict(X_test)
         return preds
 
-    def kfold(self, data):
+    def kfold(self, data, tfidf):
         """K-fold cross validation - train the model k times"""
         model = self.model
         # model.fit(data, data[utils.col_to_predict])
@@ -139,13 +141,16 @@ class Model:
         # scores = cross_val_score(model, data, target, cv=10)
         # print(f"10-FOLD - accuracy is {round(np.mean(scores), 2)}")
 
-        f1, recall, acc = [], [], []
+        f1, prec, recall, acc = [], [], [], []
         kf = KFold(n_splits=10, shuffle=True, random_state=0)
         for train_index, test_index in kf.split(data):
             xtrain, xtest = data.iloc[train_index, 12], data.iloc[test_index, 12]
             ytrain, ytest = data.iloc[train_index, 6], data.iloc[test_index, 6]
 
-            X_train, X_test = tfidf_features(xtrain.tolist(), xtest.tolist())
+            if tfidf:
+                X_train, X_test = tfidf_features_1(xtrain.tolist(), xtest.tolist(), True)
+            else:
+                X_train, X_test = bag_of_words_features_1(xtrain.tolist(), xtest.tolist(), kfold=True)
 
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
@@ -153,25 +158,29 @@ class Model:
             f1.append(metrics.f1_score(ytest, y_predicted, average="weighted"))
             recall.append(metrics.recall_score(ytest, y_predicted, average="weighted"))
             acc.append(metrics.accuracy_score(ytest, y_predicted))
+            prec.append(metrics.precision_score(ytest, y_predicted, average='weighted'))
 
         print(
-            f"10-FOLD - Accuracy: {round(np.mean(acc), 3)}, "
+            f"10-FOLD - Accuracy: {round(np.mean(acc), 3)}, Precision: {round(np.mean(prec), 3)} "
             f"Recall: {round(np.mean(recall), 3)}, F1-score: {round(np.mean(f1), 3)}"
         )
 
-    def loocv(self, data):
+    def loocv(self, data, tfidf):
         """Leave one out cross validation - train the model n times (n = number of values in the data)"""
         cv = LeaveOneOut()
         model = self.model
         # scores = cross_val_score(model, data, target, scoring='accuracy', cv=cv, n_jobs=-1)
 
-        f1, recall, acc = [], [], []
+        f1, prec, recall, acc = [], [], [], []
         kf = KFold(n_splits=data.shape[0], shuffle=True, random_state=0)
         for train_index, test_index in kf.split(data):
             xtrain, xtest = data.iloc[train_index, 12], data.iloc[test_index, 12]
             ytrain, ytest = data.iloc[train_index, 6], data.iloc[test_index, 6]
 
-            X_train, X_test = tfidf_features(xtrain.tolist(), xtest.tolist())
+            if tfidf:
+                X_train, X_test = tfidf_features_1(xtrain.tolist(), xtest.tolist(), True)
+            else:
+                X_train, X_test = bag_of_words_features_1(xtrain.tolist(), xtest.tolist(), kfold=True)
 
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
@@ -179,9 +188,10 @@ class Model:
             f1.append(metrics.f1_score(ytest, y_predicted, average="weighted"))
             recall.append(metrics.recall_score(ytest, y_predicted, average="weighted"))
             acc.append(metrics.accuracy_score(ytest, y_predicted))
+            prec.append(metrics.precision_score(ytest, y_predicted, average='weighted'))
 
         print(
-            f"LOOCV - Accuracy: {round(np.mean(acc), 3)}, "
+            f"LOOCV - Accuracy: {round(np.mean(acc), 3)}, Precision: {round(np.mean(prec), 3)}"
             f"Recall: {round(np.mean(recall), 3)}, F1-score: {round(np.mean(f1), 3)}"
         )
 
