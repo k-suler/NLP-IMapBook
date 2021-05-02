@@ -134,7 +134,7 @@ class NN:
         dims = X_train.shape[1]
         self.set_train_model(self.type, nb_classes, dims)
 
-        fBestModel = f"{filename}-{self.type}.h5"
+        fBestModel = f"./saved_models/{filename}-{self.type}.h5"
         early_stop = EarlyStopping(monitor="val_loss", patience=2, verbose=1)
         best_model = ModelCheckpoint(fBestModel, verbose=0, save_best_only=True)
 
@@ -148,8 +148,8 @@ class NN:
             verbose=True,
         )
 
-        if save_model:
-            self.model.save("./saved_models/" + fBestModel)
+        # if save_model:
+        # self.model.save("./saved_models/" + fBestModel)
 
         self.model.summary()
 
@@ -241,9 +241,9 @@ if __name__ == "__main__":
             binary=True,
         )
 
-    nn = NN("basic", lb)
+    nn = NN("deep", lb)
     nn.train(X_train, Y_train, save_model=True, filename="model-tfidf")
-    nn.load_fitted_model("./saved_models/model-basic.h5")
+    # nn.load_fitted_model("./saved_models/model-bg-basic.h5")
     nn.evaluate(X_test, Y_test)
     nn.plot_model()
 
