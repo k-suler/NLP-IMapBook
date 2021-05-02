@@ -3,6 +3,7 @@ anyascii==0.2.0
 appdirs==1.4.4
 astunparse==1.6.3
 backcall==0.2.0
+bcolors==1.0.2
 black==21.4b2
 cachetools==4.2.2
 certifi==2020.12.5
