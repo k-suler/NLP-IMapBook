@@ -141,7 +141,7 @@ class NN:
             callbacks=[best_model, early_stop],
             verbose=True,
         )
-        self.model.save(fBestModel)
+        self.model.save("./saved_models/" + fBestModel)
         self.model.summary()
 
         plt.plot(history.history["accuracy"])
@@ -221,8 +221,8 @@ if __name__ == "__main__":
         )
 
     nn = NN("deep", lb)
-    # nn.train(X_train, Y_train)
-    nn.load_fitted_model("./model-deep.h5")
+    nn.train(X_train, Y_train)
+    nn.load_fitted_model("./saved_models/model-deep.h5")
     nn.evaluate(X_test, Y_test)
     nn.plot_model()
 
