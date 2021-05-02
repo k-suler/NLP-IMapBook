@@ -11,10 +11,13 @@ def bag_of_words_features(train_data, test_data, max_features=2000, binary=False
     """Return features using bag of words"""
     vectorizer = CountVectorizer(ngram_range=(1, 3), min_df=3, stop_words='english', binary=binary)
 
-    X_train = vectorizer.fit_transform(train_data)
+    joined_train_data = train_data["lemas"].apply(" ".join)
+    joined_test_data = test_data["lemas"].apply(" ".join)
+
+    X_train = vectorizer.fit_transform(joined_train_data)
 
     X_train = X_train.astype("float16")
-    X_test = vectorizer.transform(test_data)
+    X_test = vectorizer.transform(joined_test_data)
 
     X_test = X_test.astype("float16")
     return X_train, X_test
@@ -81,4 +84,4 @@ if __name__ == "__main__":
     data = preprocess_data()
     X_train, X_test, y_train, y_test = split_train_test(data, x_col='lemas')
 
-    custom_features(X_train['lemas'].tolist(), X_test['lemas'].tolist())
+    custom_features(X_train, X_test)
