@@ -12,7 +12,7 @@ import keras
 import utils
 from baseline_models import LinearSVM, Model, NaiveBayes, PopularityModel, RandomModel
 from basic_nn import NN
-from feature_extraction import bag_of_words_features_1, tfidf_features_1
+from feature_extraction import bag_of_words_features_1, tfidf_features_1, custom_features
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
 
@@ -160,7 +160,9 @@ def tfidf(data, X_train, X_test, y_train, y_test):
 
 if __name__ == "__main__":
     data = preprocess_data()
+    features = custom_features(data)
     X_train, X_test, y_train, y_test = split_train_test(data, x_col="lemas")
+
 
     print(f"{BLUE} ############################ {ENDC}")
     print(f"{BLUE} #          TF-IDF          # {ENDC}")

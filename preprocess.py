@@ -3,6 +3,8 @@ import nltk
 import string
 import contractions
 
+from constants import emoticons
+
 nltk.download("punkt")
 nltk.download("wordnet")
 
@@ -15,7 +17,9 @@ def read_crew_data():
 def preprocess_data():
     df = read_crew_data()
     lemmatizer = nltk.stem.WordNetLemmatizer()
-    emoticons = [":)", ":D", ":("]
+
+
+
     # df['lemas'] = (
     #     df["Message"]
     #     .str.lower()

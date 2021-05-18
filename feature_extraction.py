@@ -1,11 +1,14 @@
 import numpy as np
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+
+from constants import emoticons
 from feature_extraction import *
 from preprocess import preprocess_data
 from utils import split_train_test
 import scipy.sparse as sp
-
+import functools
+import re
 
 def bag_of_words_features(train_data, test_data, max_features=2000, binary=False):
     """Return features using bag of words"""
@@ -97,19 +100,52 @@ def shortest_word(tokens):
     return min(list(map(len, tokens)))
 
 
-def custom_features(train_data, test_data):
+def count_emoticons(lemas):
+    number_of_emoticons = 0
+    for emoticon in emoticons:
+        if emoticon in lemas:
+            number_of_emoticons += 1
+    return number_of_emoticons
+
+
+from nltk import word_tokenize, pos_tag, ne_chunk
+from nltk.tag import untag, str2tuple, tuple2str
+from nltk.chunk import tree2conllstr, conllstr2tree, conlltags2tree, tree2conlltags
+
+
+def read_book(filename):
+    import pdb
+    with open(filename, "r", encoding="UTF-8") as f:
+        pdb.set_trace()
+        rl = f.readlines()
+        rl = " ".join(rl)
+        rl = rl.replace('\n', '')
+        tokens = word_tokenize(rl)
+        tagged_tokens = pos_tag(tokens)
+        ner_tree = ne_chunk(tagged_tokens)
+        iob_tagged = tree2conlltags(ner_tree)
+        print(iob_tagged)
+        f.close()
+
+def is_url(s):
+    return len(re.findall(r'(https?://[^\s]+)', s)) > 0
+
+def custom_features(data):
     v = DictVectorizer()
     features = []
-    first = True
-    for i, tokens in enumerate(train_data):
-        if len(tokens) > 0:
-            item = {
-                "count_words": count_words(tokens),
-                "longest_word": longest_word(tokens),
-                "shortest_word": shortest_word(tokens),
-            }
-            features.append(item)
 
+    data["message_length"] = data['Message'].apply(len)
+    data["longest_word"] = data["lemas"].apply(max).apply(len)
+    data["shortest_word"] = data["lemas"].apply(min).apply(len)
+    data["num_of_words"] = data["lemas"].apply(len)
+    data["contains_question_marks"] = data["Message"].str.contains("\?").apply(int)
+    data["num_of_question_marks"] = data["Message"].str.count("\?")
+    data["contains_exclamation_point"] = data["Message"].str.contains("\!").apply(int)
+    data["num_of_exclamation_point"] = data["Message"].str.count("\!")
+    data["num_of_emoticons"] = data["lemas"].apply(count_emoticons)
+    data["is_url"] = data["Message"].apply(is_url)
+
+    read_book("data/ID260 and ID261 - The Lady or the Tiger.txt")
     # joined_train_data = train_data["lemas"].apply(" ".join)
     # joined_test_data = test_data["lemas"].apply(" ".join)
     #
