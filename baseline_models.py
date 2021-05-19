@@ -148,9 +148,13 @@ class Model:
             ytrain, ytest = data.iloc[train_index, 6], data.iloc[test_index, 6]
 
             if tfidf:
-                X_train, X_test = tfidf_features_1(xtrain.tolist(), xtest.tolist(), True)
+                X_train, X_test = tfidf_features_1(
+                    xtrain.tolist(), xtest.tolist(), True
+                )
             else:
-                X_train, X_test = bag_of_words_features_1(xtrain.tolist(), xtest.tolist(), kfold=True)
+                X_train, X_test = bag_of_words_features_1(
+                    xtrain.tolist(), xtest.tolist(), kfold=True
+                )
 
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
@@ -158,7 +162,7 @@ class Model:
             f1.append(metrics.f1_score(ytest, y_predicted, average="weighted"))
             recall.append(metrics.recall_score(ytest, y_predicted, average="weighted"))
             acc.append(metrics.accuracy_score(ytest, y_predicted))
-            prec.append(metrics.precision_score(ytest, y_predicted, average='weighted'))
+            prec.append(metrics.precision_score(ytest, y_predicted, average="weighted"))
 
         print(
             f"10-FOLD - Accuracy: {round(np.mean(acc), 3)}, Precision: {round(np.mean(prec), 3)} "
@@ -178,9 +182,13 @@ class Model:
             ytrain, ytest = data.iloc[train_index, 6], data.iloc[test_index, 6]
 
             if tfidf:
-                X_train, X_test = tfidf_features_1(xtrain.tolist(), xtest.tolist(), True)
+                X_train, X_test = tfidf_features_1(
+                    xtrain.tolist(), xtest.tolist(), True
+                )
             else:
-                X_train, X_test = bag_of_words_features_1(xtrain.tolist(), xtest.tolist(), kfold=True)
+                X_train, X_test = bag_of_words_features_1(
+                    xtrain.tolist(), xtest.tolist(), kfold=True
+                )
 
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
@@ -188,7 +196,7 @@ class Model:
             f1.append(metrics.f1_score(ytest, y_predicted, average="weighted"))
             recall.append(metrics.recall_score(ytest, y_predicted, average="weighted"))
             acc.append(metrics.accuracy_score(ytest, y_predicted))
-            prec.append(metrics.precision_score(ytest, y_predicted, average='weighted'))
+            prec.append(metrics.precision_score(ytest, y_predicted, average="weighted"))
 
         print(
             f"LOOCV - Accuracy: {round(np.mean(acc), 3)}, Precision: {round(np.mean(prec), 3)}"

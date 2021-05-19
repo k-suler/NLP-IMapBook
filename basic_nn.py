@@ -7,7 +7,8 @@ import pandas as pd
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Activation, Dense
 from keras.models import Sequential, load_model
-from keras.utils import plot_model
+
+# from keras.utils import plot_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from tensorflow import keras
@@ -36,8 +37,8 @@ class NN:
             )
         elif self.type == "mlp":
             model = keras.Sequential()
-            model.add(Dense(nb_classes * 3, activation='relu', input_shape=(dims,)))
-            model.add(Dense(17, activation='relu'))
+            model.add(Dense(nb_classes * 3, activation="relu", input_shape=(dims,)))
+            model.add(Dense(17, activation="relu"))
             model.add(Activation("softmax"))
             model.compile(
                 optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
@@ -188,13 +189,19 @@ class NN:
         evaluator.classification_report(Y_test_classes, predictions)
         evaluator.confusion_matrix(Y_test_classes, predictions)
 
-    def plot_model(self, show_shapes=False, show_dtype=False):
-        plot_model(
-            self.model,
-            to_file=f"model-{self.type}.png",
-            show_shapes=show_shapes,
-            show_dtype=show_dtype,
-        )
+    # def plot_model(self, show_shapes=False, show_dtype=False):
+    #     plot_model(
+    #         self.model,
+    #         to_file=f"model-{self.type}.png",
+    #         show_shapes=show_shapes,
+    #         show_dtype=show_dtype,
+    #     )def plot_model(self, show_shapes=False, show_dtype=False):
+    #     plot_model(
+    #         self.model,
+    #         to_file=f"model-{self.type}.png",
+    #         show_shapes=show_shapes,
+    #         show_dtype=show_dtype,
+    #     )
 
 
 tfidf = TfidfVectorizer(binary=True, stop_words="english", max_df=0.5, min_df=2)
