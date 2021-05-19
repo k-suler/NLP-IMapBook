@@ -1,7 +1,12 @@
+import pdb
+
 import numpy as np
+from nltk.corpus import stopwords
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-
+from nltk import word_tokenize, pos_tag, ne_chunk
+from nltk.tag import untag, str2tuple, tuple2str
+from nltk.chunk import tree2conllstr, conllstr2tree, conlltags2tree, tree2conlltags
 from constants import emoticons
 from feature_extraction import *
 from preprocess import preprocess_data
@@ -10,10 +15,13 @@ import scipy.sparse as sp
 import functools
 import re
 
+# import textblob as textblob
+
+
 def bag_of_words_features(train_data, test_data, max_features=2000, binary=False):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
-        ngram_range=(1, 3), min_df=3, stop_words='english', binary=binary
+        ngram_range=(1, 3), min_df=3, stop_words="english", binary=binary
     )
 
     joined_train_data = train_data["lemas"].apply(" ".join)
@@ -47,9 +55,13 @@ def tfidf_features(train_data, test_data, binary=False):
     return X_train, X_test
 
 
-def bag_of_words_features_1(train_data, test_data, max_features=2000, binary=False, kfold=False):
+def bag_of_words_features_1(
+    train_data, test_data, max_features=2000, binary=False, kfold=False
+):
     """Return features using bag of words"""
-    vectorizer = CountVectorizer(ngram_range=(1, 3), stop_words='english', binary=binary)
+    vectorizer = CountVectorizer(
+        ngram_range=(1, 3), stop_words="english", binary=binary
+    )
 
     if not kfold:
         joined_train_data = train_data["lemas"].apply(" ".join)
@@ -76,12 +88,12 @@ def tfidf_features_1(train_data, test_data, kfold):
         joined_train_data = train_data
         joined_test_data = test_data
     vectorizer = TfidfVectorizer(
-        analyzer='word',
+        analyzer="word",
         max_features=200000,
         token_pattern=r"\w{1,}",
         use_idf=True,
         sublinear_tf=True,
-        ngram_range=(1, 2)
+        ngram_range=(1, 2),
     )
     X_train = vectorizer.fit_transform(joined_train_data)
     X_test = vectorizer.transform(joined_test_data)
@@ -108,33 +120,49 @@ def count_emoticons(lemas):
     return number_of_emoticons
 
 
-from nltk import word_tokenize, pos_tag, ne_chunk
-from nltk.tag import untag, str2tuple, tuple2str
-from nltk.chunk import tree2conllstr, conllstr2tree, conlltags2tree, tree2conlltags
-
-
 def read_book(filename):
-    import pdb
     with open(filename, "r", encoding="UTF-8") as f:
-        pdb.set_trace()
         rl = f.readlines()
         rl = " ".join(rl)
-        rl = rl.replace('\n', '')
+        rl = rl.replace("\n", "")
+        rl = rl.replace("\ufeff", "")
         tokens = word_tokenize(rl)
         tagged_tokens = pos_tag(tokens)
         ner_tree = ne_chunk(tagged_tokens)
         iob_tagged = tree2conlltags(ner_tree)
-        print(iob_tagged)
+        persons = list(filter(lambda x: "PERSON" in x[2], iob_tagged))
         f.close()
+        return persons
+
 
 def is_url(s):
-    return len(re.findall(r'(https?://[^\s]+)', s)) > 0
+    return int(len(re.findall(r"(https?://[^\s]+)", s)) > 0)
 
-def custom_features(data):
-    v = DictVectorizer()
-    features = []
 
-    data["message_length"] = data['Message'].apply(len)
+def person_mentioned(tokens):
+    book1_persons = read_book("data/ID260 and ID261 - The Lady or the Tiger.txt")
+
+
+# def count_tag_types(message, type):
+#     pos_tags = {
+#         'noun': ['NN', 'NNS', 'NNP', 'NNPS'],
+#         'pron': ['PRP', 'PRP$', 'WP', 'WP$'],
+#         'verb': ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ'],
+#         'adj': ['JJ', 'JJR', 'JJS'],
+#         'adv': ['RB', 'RBR', 'RBS', 'WRB']
+#     }
+#     cnt = 0
+#     try:
+#         wiki = textblob.TextBlob(message)
+#         print(wiki.tags)
+#         cnt = sum([1 if list(t)[1] in pos_tags[type] else 0 for t in wiki.tags])
+#     except:
+#         pass
+#     return cnt
+
+
+def custom_features_extractor(data):
+    data["message_length"] = data["Message"].apply(len)
     data["longest_word"] = data["lemas"].apply(max).apply(len)
     data["shortest_word"] = data["lemas"].apply(min).apply(len)
     data["num_of_words"] = data["lemas"].apply(len)
@@ -145,27 +173,17 @@ def custom_features(data):
     data["num_of_emoticons"] = data["lemas"].apply(count_emoticons)
     data["is_url"] = data["Message"].apply(is_url)
 
-    read_book("data/ID260 and ID261 - The Lady or the Tiger.txt")
-    # joined_train_data = train_data["lemas"].apply(" ".join)
-    # joined_test_data = test_data["lemas"].apply(" ".join)
-    #
-    # vectorizer1 = CountVectorizer(min_df=2, ngram_range=(1, 2))
-    # bow_count = vectorizer1.fit_transform(joined_train_data)
-    # bow_transform = vectorizer1.transform(joined_test_data)
-    #
-    # vectorizer2 = TfidfVectorizer()
-    # pos_tfidf = vectorizer2.fit_transform(joined_train_data)
-    # tfidf_transform = vectorizer1.transform(joined_test_data)
-    #
-    # X_train = sp.vstack((bow_count, pos_tfidf, v.fit_transform(features)))
-    # X_test = sp.vstack((bow_transform, tfidf_transform, v.transform(features)))
-    X_train = v.fit_transform(features)
-    X_test = v.transform(features)
-    return X_train, X_test
+    data["features"] = data[data.columns[14:]].apply(lambda x: list(x), axis=1)
+    data["features"] = np.array(data.loc[:, 'features'].tolist())
+    # data['num_nouns'] = data['Message'].apply(lambda x: count_tag_types(x, 'noun'))
+    # data['num_verbs'] = data['Message'].apply(lambda x: count_tag_types(x, 'verb'))
+    # data['num_adjs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adj'))
+    # data['num_advs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adv'))
+    # data['num_prons'] = data['Message'].apply(lambda x: count_tag_types(x, 'pron'))
+
+    return data
 
 
 if __name__ == "__main__":
     data = preprocess_data()
-    X_train, X_test, y_train, y_test = split_train_test(data, x_col='lemas')
-
-    custom_features(X_train, X_test)
+    custom_features_extractor(data)
