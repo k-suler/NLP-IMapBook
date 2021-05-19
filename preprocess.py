@@ -19,7 +19,7 @@ def preprocess_data():
     df = read_crew_data()
     lemmatizer = nltk.stem.WordNetLemmatizer()
 
-    # df['lemas'] = (
+    # df['lemmas'] = (
     #     df["Message"]
     #     .str.lower()
     #     .apply(contractions.fix)
@@ -70,13 +70,13 @@ def preprocess_data():
         .apply(lambda tokens: list(filter(lambda token: token != "", tokens)))
     )
 
-    df["lemas"] = df["tokens"].apply(
+    df["lemmas"] = df["tokens"].apply(
         lambda tokens: [lemmatizer.lemmatize(token) for token in tokens]
     )
     stop = stopwords.words("english")
-    df["no_stopwords"] = df["lemas"].apply(
+    df["no_stopwords"] = df["lemmas"].apply(
         lambda lema: [item for item in lema if item not in stop]
     )
-    df["joined_lemas"] = df["lemas"].apply(" ".join)
+    df["joined_lemmas"] = df["lemmas"].apply(" ".join)
 
     return df

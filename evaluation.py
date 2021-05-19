@@ -19,7 +19,7 @@ class Evaluator:
 
     def confusion_matrix(self, Y_test, preds):
         cm = metrics.confusion_matrix(Y_test, preds)
-        print(f"Confusion matrix:\n {cm}")
+        # print(f"Confusion matrix:\n {cm}")
         precision = metrics.precision_score(Y_test, preds, average="weighted")
         recall = metrics.recall_score(Y_test, preds, average="weighted")
         f1_score = metrics.f1_score(Y_test, preds, average="weighted")

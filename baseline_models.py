@@ -46,7 +46,7 @@ class PopularityModel:
         preds = self.predict(Y_train, Y_test)
         preds = np.array(preds)
         evaluator.accuracy(Y_test, preds)
-        evaluator.classification_report(Y_test, preds)
+        # evaluator.classification_report(Y_test, preds)
         evaluator.confusion_matrix(Y_test, preds)
 
 

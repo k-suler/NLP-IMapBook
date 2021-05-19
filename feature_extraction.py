@@ -1,5 +1,5 @@
 import pdb
-
+from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 from nltk.corpus import stopwords
 from sklearn.feature_extraction import DictVectorizer
@@ -15,31 +15,23 @@ import scipy.sparse as sp
 import functools
 import re
 
+
 # import textblob as textblob
 
 
-def bag_of_words_features(train_data, test_data, max_features=2000, binary=False):
+def bag_of_words_features(data, max_features=2000, binary=False):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
         ngram_range=(1, 3), min_df=3, stop_words="english", binary=binary
     )
 
-    joined_train_data = train_data["lemas"].apply(" ".join)
-    joined_test_data = test_data["lemas"].apply(" ".join)
-
-    X_train = vectorizer.fit_transform(joined_train_data)
-
-    X_train = X_train.astype("float16")
-    X_test = vectorizer.transform(joined_test_data)
-
-    X_test = X_test.astype("float16")
-    return X_train, X_test
+    return vectorizer.fit_transform(
+        data["joined_lemmas"]
+    )
 
 
-def tfidf_features(train_data, test_data, binary=False):
+def tfidf_features(data, binary=False):
     """Return features using TFIDF"""
-    joined_train_data = train_data["lemas"].apply(" ".join)
-    joined_test_data = test_data["lemas"].apply(" ".join)
     vectorizer = TfidfVectorizer(
         token_pattern=r"\w{1,}",
         min_df=0.2,
@@ -48,15 +40,12 @@ def tfidf_features(train_data, test_data, binary=False):
         binary=binary,
         ngram_range=(1, 3),
     )
-    X_train = vectorizer.fit_transform(joined_train_data)
-    X_train = X_train.astype("float16")
-    X_test = vectorizer.transform(joined_test_data)
-    X_test = X_test.astype("float16")
-    return X_train, X_test
-
+    return vectorizer.fit_transform(
+            data["joined_lemmas"]
+        )
 
 def bag_of_words_features_1(
-    train_data, test_data, max_features=2000, binary=False, kfold=False
+        train_data, test_data, max_features=2000, binary=False, kfold=False
 ):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
@@ -64,8 +53,8 @@ def bag_of_words_features_1(
     )
 
     if not kfold:
-        joined_train_data = train_data["lemas"].apply(" ".join)
-        joined_test_data = test_data["lemas"].apply(" ".join)
+        joined_train_data = train_data["lemmas"].apply(" ".join)
+        joined_test_data = test_data["lemmas"].apply(" ".join)
     else:
         joined_train_data = train_data
         joined_test_data = test_data
@@ -82,8 +71,8 @@ def bag_of_words_features_1(
 def tfidf_features_1(train_data, test_data, kfold):
     """Return features using TFIDF"""
     if not kfold:
-        joined_train_data = train_data["lemas"].apply(" ".join)
-        joined_test_data = test_data["lemas"].apply(" ".join)
+        joined_train_data = train_data["lemmas"].apply(" ".join)
+        joined_test_data = test_data["lemmas"].apply(" ".join)
     else:
         joined_train_data = train_data
         joined_test_data = test_data
@@ -112,10 +101,10 @@ def shortest_word(tokens):
     return min(list(map(len, tokens)))
 
 
-def count_emoticons(lemas):
+def count_emoticons(lemmas):
     number_of_emoticons = 0
     for emoticon in emoticons:
-        if emoticon in lemas:
+        if emoticon in lemmas:
             number_of_emoticons += 1
     return number_of_emoticons
 
@@ -163,25 +152,34 @@ def person_mentioned(tokens):
 
 def custom_features_extractor(data):
     data["message_length"] = data["Message"].apply(len)
-    data["longest_word"] = data["lemas"].apply(max).apply(len)
-    data["shortest_word"] = data["lemas"].apply(min).apply(len)
-    data["num_of_words"] = data["lemas"].apply(len)
+    data["longest_word"] = data["lemmas"].apply(max).apply(len)
+    data["shortest_word"] = data["lemmas"].apply(min).apply(len)
+    data["num_of_words"] = data["lemmas"].apply(len)
     data["contains_question_marks"] = data["Message"].str.contains("\?").apply(int)
     data["num_of_question_marks"] = data["Message"].str.count("\?")
     data["contains_exclamation_point"] = data["Message"].str.contains("\!").apply(int)
     data["num_of_exclamation_point"] = data["Message"].str.count("\!")
-    data["num_of_emoticons"] = data["lemas"].apply(count_emoticons)
+    data["num_of_emoticons"] = data["lemmas"].apply(count_emoticons)
     data["is_url"] = data["Message"].apply(is_url)
 
-    data["features"] = data[data.columns[14:]].apply(lambda x: list(x), axis=1)
-    data["features"] = np.array(data.loc[:, 'features'].tolist())
+    # data["features"] = sp.hstack((bag_of_words_features(data), data[["is_url"]].values), format='csr')
+    # data["features"] = data[data.columns[14:]].apply(lambda x: list(x), axis=1)
+    # data["features"] = np.array(data.loc[:, "features"].tolist())
     # data['num_nouns'] = data['Message'].apply(lambda x: count_tag_types(x, 'noun'))
     # data['num_verbs'] = data['Message'].apply(lambda x: count_tag_types(x, 'verb'))
     # data['num_adjs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adj'))
     # data['num_advs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adv'))
     # data['num_prons'] = data['Message'].apply(lambda x: count_tag_types(x, 'pron'))
 
-    return data
+    tfidf = tfidf_features(data)
+    bow = bag_of_words_features(data)
+
+    scaler = MinMaxScaler()
+    X_cols = scaler.fit_transform(data[data.columns[14:]])
+
+    X_sparse = sp.hstack([sp.csr_matrix(tfidf), sp.csr_matrix(bow), sp.csr_matrix(X_cols)])
+
+    return X_sparse
 
 
 if __name__ == "__main__":
