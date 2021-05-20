@@ -42,7 +42,7 @@ class PopularityModel:
         most_representative_class = self.get_most_representative_class(train)
         return [most_representative_class for _ in range(len(test))]
 
-    def evaluate(self, X_train, Y_train, X_test, Y_test):
+    def evaluate(self, Y_train, Y_test):
         preds = self.predict(Y_train, Y_test)
         preds = np.array(preds)
         evaluator.accuracy(Y_test, preds)
@@ -62,7 +62,7 @@ class RandomModel:
     def predict(self, train, test):
         return [self.get_random_class(train) for _ in range(len(test))]
 
-    def evaluate(self, X_train, Y_train, X_test, Y_test):
+    def evaluate(self, Y_train, Y_test):
         preds = self.predict(Y_train, Y_test)
         preds = np.array(preds)
         evaluator.accuracy(Y_test, preds)
@@ -133,28 +133,32 @@ class Model:
         preds = model.predict(X_test)
         return preds
 
-    def kfold(self, data, tfidf):
+    def kfold(self, features, data, type):
         """K-fold cross validation - train the model k times"""
         model = self.model
-        # model.fit(data, data[utils.col_to_predict])
-        # preds = cross_val_predict(model, data, target, cv=10)
-        # scores = cross_val_score(model, data, target, cv=10)
-        # print(f"10-FOLD - accuracy is {round(np.mean(scores), 2)}")
 
         f1, prec, recall, acc = [], [], [], []
         kf = KFold(n_splits=10, shuffle=True, random_state=0)
-        for train_index, test_index in kf.split(data):
-            xtrain, xtest = data.iloc[train_index, 12], data.iloc[test_index, 12]
+        if type == 'custom':
+            input_data = features
+        else:
+            input_data = data
+        for train_index, test_index in kf.split(input_data):
+            if type == "tfidf" or type == "bow":
+                xtrain, xtest = data.iloc[train_index, 13], data.iloc[test_index, 13]
             ytrain, ytest = data.iloc[train_index, 6], data.iloc[test_index, 6]
 
-            if tfidf:
+            if type == 'tfidf':
                 X_train, X_test = tfidf_features_1(
                     xtrain.tolist(), xtest.tolist(), True
                 )
-            else:
+            elif type == 'bow':
                 X_train, X_test = bag_of_words_features_1(
                     xtrain.tolist(), xtest.tolist(), kfold=True
                 )
+            elif type == 'custom':
+                X_train = features.tocsr()[train_index]
+                X_test = features.tocsr()[test_index]
 
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
@@ -169,26 +173,28 @@ class Model:
             f"Recall: {round(np.mean(recall), 3)}, F1-score: {round(np.mean(f1), 3)}"
         )
 
-    def loocv(self, data, tfidf):
+    def loocv(self, features, data, type):
         """Leave one out cross validation - train the model n times (n = number of values in the data)"""
-        cv = LeaveOneOut()
         model = self.model
-        # scores = cross_val_score(model, data, target, scoring='accuracy', cv=cv, n_jobs=-1)
 
         f1, prec, recall, acc = [], [], [], []
         kf = KFold(n_splits=data.shape[0], shuffle=True, random_state=0)
-        for train_index, test_index in kf.split(data):
-            xtrain, xtest = data.iloc[train_index, 12], data.iloc[test_index, 12]
+        for train_index, test_index in kf.split(features):
+            if type == "tfidf" or type == "bow":
+                xtrain, xtest = data.iloc[train_index, 12], data.iloc[test_index, 12]
             ytrain, ytest = data.iloc[train_index, 6], data.iloc[test_index, 6]
 
-            if tfidf:
+            if type == 'tfidf':
                 X_train, X_test = tfidf_features_1(
                     xtrain.tolist(), xtest.tolist(), True
                 )
-            else:
+            elif type == 'bow':
                 X_train, X_test = bag_of_words_features_1(
                     xtrain.tolist(), xtest.tolist(), kfold=True
                 )
+            elif type == 'custom':
+                X_train = features.tocsr()[train_index]
+                X_test = features.tocsr()[test_index]
 
             model.fit(X_train, ytrain)
             y_predicted = model.predict(X_test)
@@ -224,6 +230,6 @@ class Model:
         model = self.train(X_train, Y_train)
         preds = self.predict(model, X_test)
         evaluator.accuracy(Y_test, preds)
-        evaluator.classification_report(Y_test, preds)
+        # evaluator.classification_report(Y_test, preds)
         evaluator.confusion_matrix(Y_test, preds)
         return model
