@@ -1,25 +1,19 @@
-import pdb
-from sklearn.preprocessing import MinMaxScaler
-import numpy as np
+import string
+
+import nltk
+import textblob as textblob
+from nltk import word_tokenize, pos_tag, ne_chunk, tree2conlltags
 from nltk.corpus import stopwords
-from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from nltk import word_tokenize, pos_tag, ne_chunk
-from nltk.tag import untag, str2tuple, tuple2str
-from nltk.chunk import tree2conllstr, conllstr2tree, conlltags2tree, tree2conlltags
+from sklearn.preprocessing import MinMaxScaler
 from constants import emoticons
 from feature_extraction import *
 from preprocess import preprocess_data
-from utils import split_train_test
 import scipy.sparse as sp
-import functools
 import re
 
 
-# import textblob as textblob
-
-
-def bag_of_words_features(data, max_features=2000, binary=False):
+def bag_of_words_features(data, binary=False):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
         ngram_range=(1, 3), min_df=3, stop_words="english", binary=binary
@@ -41,8 +35,9 @@ def tfidf_features(data, binary=False):
         ngram_range=(1, 3),
     )
     return vectorizer.fit_transform(
-            data["joined_lemmas"]
-        )
+        data["joined_lemmas"]
+    )
+
 
 def bag_of_words_features_1(
         train_data, test_data, max_features=2000, binary=False, kfold=False
@@ -115,39 +110,60 @@ def read_book(filename):
         rl = " ".join(rl)
         rl = rl.replace("\n", "")
         rl = rl.replace("\ufeff", "")
-        tokens = word_tokenize(rl)
-        tagged_tokens = pos_tag(tokens)
-        ner_tree = ne_chunk(tagged_tokens)
-        iob_tagged = tree2conlltags(ner_tree)
-        persons = list(filter(lambda x: "PERSON" in x[2], iob_tagged))
         f.close()
-        return persons
+        return rl
+
+
+def get_iob(rl):
+    tokens = list(filter(lambda token: token not in string.punctuation, map(lambda token: token.lower(), word_tokenize(rl))))
+
+    lemmatizer = nltk.stem.WordNetLemmatizer()
+    lemmas = [lemmatizer.lemmatize(token) for token in tokens]
+    stop = stopwords.words("english")
+    no_stopwords = [item for item in lemmas if item not in stop]
+
+    tagged_tokens = pos_tag(tokens)
+    ner_tree = ne_chunk(tagged_tokens)
+    iob_tagged = tree2conlltags(ner_tree)
+    persons = list(filter(lambda x: "PERSON" in x[2], iob_tagged))
+    return persons, no_stopwords
 
 
 def is_url(s):
     return int(len(re.findall(r"(https?://[^\s]+)", s)) > 0)
 
 
-def person_mentioned(tokens):
-    book1_persons = read_book("data/ID260 and ID261 - The Lady or the Tiger.txt")
+def is_person_in_book(message, persons):
+    return any(list([word in persons for word in message]))
+
+def is_word_in_book(message, words):
+    return any(list([word in words for word in message]))
 
 
-# def count_tag_types(message, type):
-#     pos_tags = {
-#         'noun': ['NN', 'NNS', 'NNP', 'NNPS'],
-#         'pron': ['PRP', 'PRP$', 'WP', 'WP$'],
-#         'verb': ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ'],
-#         'adj': ['JJ', 'JJR', 'JJS'],
-#         'adv': ['RB', 'RBR', 'RBS', 'WRB']
-#     }
-#     cnt = 0
-#     try:
-#         wiki = textblob.TextBlob(message)
-#         print(wiki.tags)
-#         cnt = sum([1 if list(t)[1] in pos_tags[type] else 0 for t in wiki.tags])
-#     except:
-#         pass
-#     return cnt
+def person_mentioned(data, iob):
+    persons = list(map(lambda person: str(person[0]).lower(), iob))
+    return data["lemmas"].apply(lambda message: is_word_in_book(message, persons))
+
+def book_words(data, book_no_stopwords):
+    return data["no_stopwords"].apply(lambda message: is_person_in_book(message, book_no_stopwords))
+
+
+def count_tag_types(message, type):
+    pos_tags = {
+        'noun': ['NN', 'NNS', 'NNP', 'NNPS'],
+        'pron': ['PRP', 'PRP$', 'WP', 'WP$'],
+        'verb': ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ'],
+        'adj': ['JJ', 'JJR', 'JJS'],
+        'adv': ['RB', 'RBR', 'RBS', 'WRB']
+    }
+    cnt = 0
+    try:
+        wiki = textblob.TextBlob(message)
+        # print(wiki.tags)
+        cnt = sum([1 if list(t)[1] in pos_tags[type] else 0 for t in wiki.tags])
+    except:
+        pass
+    return cnt
 
 
 def custom_features_extractor(data):
@@ -161,15 +177,27 @@ def custom_features_extractor(data):
     data["num_of_exclamation_point"] = data["Message"].str.count("\!")
     data["num_of_emoticons"] = data["lemmas"].apply(count_emoticons)
     data["is_url"] = data["Message"].apply(is_url)
+    data['num_nouns'] = data['Message'].apply(lambda x: count_tag_types(x, 'noun'))
+    data['num_verbs'] = data['Message'].apply(lambda x: count_tag_types(x, 'verb'))
+    data['num_adjs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adj'))
+    data['num_advs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adv'))
+    data['num_prons'] = data['Message'].apply(lambda x: count_tag_types(x, 'pron'))
 
-    # data["features"] = sp.hstack((bag_of_words_features(data), data[["is_url"]].values), format='csr')
-    # data["features"] = data[data.columns[14:]].apply(lambda x: list(x), axis=1)
-    # data["features"] = np.array(data.loc[:, "features"].tolist())
-    # data['num_nouns'] = data['Message'].apply(lambda x: count_tag_types(x, 'noun'))
-    # data['num_verbs'] = data['Message'].apply(lambda x: count_tag_types(x, 'verb'))
-    # data['num_adjs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adj'))
-    # data['num_advs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adv'))
-    # data['num_prons'] = data['Message'].apply(lambda x: count_tag_types(x, 'pron'))
+    book1 = read_book("data/ID260 and ID261 - The Lady or the Tiger.txt")
+    book2 = read_book("data/ID264 and ID265 - Just Have Less.txt")
+    book3 = read_book("data/ID266 and ID267 - Design for the Future When the Future Is Bleak.txt")
+
+    book1_persons, book1_no_stopwords = get_iob(book1)
+    book2_persons, book2_no_stopwords = get_iob(book2)
+    book3_persons, book3_no_stopwords = get_iob(book3)
+
+    # data["book1_persons_mentioned"] = person_mentioned(data, book1_persons)
+    # data["book2_persons_mentioned"] = person_mentioned(data, book2_persons)
+    # data["book3_persons_mentioned"] = person_mentioned(data, book3_persons)
+
+    data["words_in_book1"] = book_words(data, book1_no_stopwords)
+    data["words_in_book2"] = book_words(data, book2_no_stopwords)
+    data["words_in_book3"] = book_words(data, book3_no_stopwords)
 
     tfidf = tfidf_features(data)
     bow = bag_of_words_features(data)
@@ -183,5 +211,6 @@ def custom_features_extractor(data):
 
 
 if __name__ == "__main__":
+    print("Start")
     data = preprocess_data()
     custom_features_extractor(data)
