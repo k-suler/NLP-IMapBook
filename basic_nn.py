@@ -7,13 +7,14 @@ import pandas as pd
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Activation, Dense
 from keras.models import Sequential, load_model
-from keras.utils import plot_model
+
+# from keras.utils import plot_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from tensorflow import keras
 
 from evaluation import Evaluator
-from feature_extraction import bag_of_words_features, tfidf_features
+from feature_extraction import bag_of_words_features, tfidf_features, custom_features_extractor
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
 
@@ -36,8 +37,8 @@ class NN:
             )
         elif self.type == "mlp":
             model = keras.Sequential()
-            model.add(Dense(nb_classes * 3, activation='relu', input_shape=(dims,)))
-            model.add(Dense(17, activation='relu'))
+            model.add(Dense(nb_classes * 3, activation="relu", input_shape=(dims,)))
+            model.add(Dense(17, activation="relu"))
             model.add(Activation("softmax"))
             model.compile(
                 optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
@@ -188,13 +189,19 @@ class NN:
         evaluator.classification_report(Y_test_classes, predictions)
         evaluator.confusion_matrix(Y_test_classes, predictions)
 
-    def plot_model(self, show_shapes=False, show_dtype=False):
-        plot_model(
-            self.model,
-            to_file=f"model-{self.type}.png",
-            show_shapes=show_shapes,
-            show_dtype=show_dtype,
-        )
+    # def plot_model(self, show_shapes=False, show_dtype=False):
+    #     plot_model(
+    #         self.model,
+    #         to_file=f"model-{self.type}.png",
+    #         show_shapes=show_shapes,
+    #         show_dtype=show_dtype,
+    #     )def plot_model(self, show_shapes=False, show_dtype=False):
+    #     plot_model(
+    #         self.model,
+    #         to_file=f"model-{self.type}.png",
+    #         show_shapes=show_shapes,
+    #         show_dtype=show_dtype,
+    #     )
 
 
 tfidf = TfidfVectorizer(binary=True, stop_words="english", max_df=0.5, min_df=2)
@@ -210,9 +217,16 @@ def tfidf_features_my(txt, flag):
 
 
 if __name__ == "__main__":
+
+    # data = preprocess_data()
+    # X_train, X_test, Y_train, Y_test = split_train_test(data, x_col="lemmas")
+
     data = preprocess_data()
-    X_train, X_test, Y_train, Y_test = split_train_test(data, x_col="lemas")
+    features = custom_features_extractor(data)
+    X_train, X_test, Y_train, Y_test = split_train_test(features, x_col="features", y=data[["CodePreliminary"]])
     Y_test_classes = Y_test
+    X_train = X_train.toarray()
+    X_test = X_test.toarray()
 
     lb = LabelEncoder()
     lb.fit(get_classes(data).tolist())
@@ -222,24 +236,24 @@ if __name__ == "__main__":
     Y_test = keras.utils.to_categorical(Y_test)
 
     use_tfidf = True
-    if use_tfidf:
-        # X_train = tfidf_features(X_train["joined_lemas"].tolist())
-        # X_test = tfidf_features(X_test["joined_lemas"].tolist())
-        X_train, X_test = tfidf_features(
-            X_train,
-            X_test,
-            binary=True,
-        )
-        # X_train = X_train[:, :, None]
-        # X_test = X_test[:, :, None]
-        # X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
-        # X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
-    else:
-        X_train, X_test = bag_of_words_features(
-            X_train,
-            X_test,
-            binary=True,
-        )
+    # if use_tfidf:
+    #     # X_train = tfidf_features(X_train["joined_lemmas"].tolist())
+    #     # X_test = tfidf_features(X_test["joined_lemmas"].tolist())
+    #     X_train, X_test = tfidf_features(
+    #         X_train,
+    #         X_test,
+    #         binary=True,
+    #     )
+    #     # X_train = X_train[:, :, None]
+    #     # X_test = X_test[:, :, None]
+    #     # X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
+    #     # X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
+    # else:
+    #     X_train, X_test = bag_of_words_features(
+    #         X_train,
+    #         X_test,
+    #         binary=True,
+    #     )
 
     nn = NN("deep", lb)
     nn.train(X_train, Y_train, save_model=True, filename="model-tfidf")

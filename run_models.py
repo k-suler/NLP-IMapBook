@@ -1,6 +1,7 @@
 import os
 import warnings
 
+import numpy as np
 from bcolors import BLUE, ENDC
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.metrics import accuracy_score
@@ -12,7 +13,11 @@ import keras
 import utils
 from baseline_models import LinearSVM, Model, NaiveBayes, PopularityModel, RandomModel
 from basic_nn import NN
-from feature_extraction import bag_of_words_features_1, tfidf_features_1
+from feature_extraction import (
+    bag_of_words_features_1,
+    tfidf_features_1,
+    custom_features_extractor,
+)
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
 
@@ -21,6 +26,35 @@ warnings.filterwarnings("ignore")
 pm = PopularityModel()
 rm = RandomModel()
 
+
+def custom_features(features, data):
+    X_train, X_test, y_train, y_test = split_train_test(features, x_col="features", y=data["CodePreliminary"])
+    X_train = X_train.toarray()
+    X_test = X_test.toarray()
+    print(X_train)
+    print(f"{BLUE} Starting with Naive Bayes classifier {ENDC}")
+    nb = Model("Naive Bayes", MultinomialNB())
+    nb.evaluate(X_train, y_train, X_test, y_test)
+
+    print(f"{BLUE} Starting with Po Uri {ENDC}")
+    # nb.kfold(data, False)
+
+    print(f"{BLUE} Starting with Support Vector Machine classifier {ENDC}")
+    svm = Model("Support Vector Machine", SVC(kernel="rbf", gamma="auto", C=1000))
+    svm.evaluate(X_train, y_train, X_test, y_test)
+
+    print(f"{BLUE} Starting with Logistic Regression classifier {ENDC}")
+    lg = Model(
+            "Support Vector Machine",
+            LogisticRegression(multi_class="multinomial", max_iter=1000, C=1.0 / 0.01),
+        )
+    lg.evaluate(X_train, y_train, X_test, y_test)
+
+    print(f"{BLUE} Starting with Popularity classifier {ENDC}")
+    # pm.evaluate(X_train, y_train, X_test, y_test)
+
+    print(f"{BLUE} Starting with Random classifier {ENDC}")
+    # rm.evaluate(X_train, y_train, X_test, y_test)
 
 def bow(data, X_train, X_test, y_train, y_test):
     # word level TF-IDF
@@ -44,7 +78,7 @@ def bow(data, X_train, X_test, y_train, y_test):
     # bets_score, best_C, best_kernel, best_gamma = svm_find_best.find_best_parameters(
     #     X_train, y_train
     # )
-    svm = Model("Support Vector Machine", SVC(kernel='rbf', gamma='auto', C=1000))
+    svm = Model("Support Vector Machine", SVC(kernel="rbf", gamma="auto", C=1000))
     svm.evaluate(X_train, y_train, X_test, y_test)
 
     # svm.kfold(data, False)
@@ -160,14 +194,19 @@ def tfidf(data, X_train, X_test, y_train, y_test):
 
 if __name__ == "__main__":
     data = preprocess_data()
-    X_train, X_test, y_train, y_test = split_train_test(data, x_col="lemas")
+    features = custom_features_extractor(data)
+
+    # print(f"{BLUE} ############################ {ENDC}")
+    # print(f"{BLUE} #          TF-IDF          # {ENDC}")
+    # print(f"{BLUE} ############################ {ENDC}")
+    # tfidf(data)
+    #
+    # print(f"{BLUE} ############################ {ENDC}")
+    # print(f"{BLUE} #            BOW           # {ENDC}")
+    # print(f"{BLUE} ############################ {ENDC}")
+    # bow(data)
 
     print(f"{BLUE} ############################ {ENDC}")
     print(f"{BLUE} #          TF-IDF          # {ENDC}")
     print(f"{BLUE} ############################ {ENDC}")
-    tfidf(data, X_train, X_test, y_train, y_test)
-
-    print(f"{BLUE} ############################ {ENDC}")
-    print(f"{BLUE} #            BOW           # {ENDC}")
-    print(f"{BLUE} ############################ {ENDC}")
-    bow(data, X_train, X_test, y_train, y_test)
+    custom_features(features, data)
