@@ -19,9 +19,7 @@ def bag_of_words_features(data, binary=False):
         ngram_range=(1, 3), min_df=3, stop_words="english", binary=binary
     )
 
-    return vectorizer.fit_transform(
-        data["joined_lemmas"]
-    )
+    return vectorizer.fit_transform(data["joined_lemmas"])
 
 
 def tfidf_features(data, binary=False):
@@ -34,13 +32,11 @@ def tfidf_features(data, binary=False):
         binary=binary,
         ngram_range=(1, 3),
     )
-    return vectorizer.fit_transform(
-        data["joined_lemmas"]
-    )
+    return vectorizer.fit_transform(data["joined_lemmas"])
 
 
 def bag_of_words_features_1(
-        train_data, test_data, max_features=2000, binary=False, kfold=False
+    train_data, test_data, max_features=2000, binary=False, kfold=False
 ):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
@@ -115,7 +111,12 @@ def read_book(filename):
 
 
 def get_iob(rl):
-    tokens = list(filter(lambda token: token not in string.punctuation, map(lambda token: token.lower(), word_tokenize(rl))))
+    tokens = list(
+        filter(
+            lambda token: token not in string.punctuation,
+            map(lambda token: token.lower(), word_tokenize(rl)),
+        )
+    )
 
     lemmatizer = nltk.stem.WordNetLemmatizer()
     lemmas = [lemmatizer.lemmatize(token) for token in tokens]
@@ -136,6 +137,7 @@ def is_url(s):
 def is_person_in_book(message, persons):
     return any(list([word in persons for word in message]))
 
+
 def is_word_in_book(message, words):
     return any(list([word in words for word in message]))
 
@@ -144,26 +146,38 @@ def person_mentioned(data, iob):
     persons = list(map(lambda person: str(person[0]).lower(), iob))
     return data["lemmas"].apply(lambda message: is_word_in_book(message, persons))
 
+
 def book_words(data, book_no_stopwords):
-    return data["no_stopwords"].apply(lambda message: is_person_in_book(message, book_no_stopwords))
+    return data["no_stopwords"].apply(
+        lambda message: is_person_in_book(message, book_no_stopwords)
+    )
 
 
 def count_tag_types(message, type):
     pos_tags = {
-        'noun': ['NN', 'NNS', 'NNP', 'NNPS'],
-        'pron': ['PRP', 'PRP$', 'WP', 'WP$'],
-        'verb': ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ'],
-        'adj': ['JJ', 'JJR', 'JJS'],
-        'adv': ['RB', 'RBR', 'RBS', 'WRB']
+        "noun": ["NN", "NNS", "NNP", "NNPS"],
+        "pron": ["PRP", "PRP$", "WP", "WP$"],
+        "verb": ["VB", "VBD", "VBG", "VBN", "VBP", "VBZ"],
+        "adj": ["JJ", "JJR", "JJS"],
+        "adv": ["RB", "RBR", "RBS", "WRB"],
     }
     cnt = 0
     try:
         wiki = textblob.TextBlob(message)
-        # print(wiki.tags)
         cnt = sum([1 if list(t)[1] in pos_tags[type] else 0 for t in wiki.tags])
     except:
         pass
     return cnt
+
+
+def compare_message_to_book(message, book):
+    vect = TfidfVectorizer()
+    tfidf = vect.fit_transform([message, book])
+    return ((tfidf * tfidf.T).A).min()
+
+
+def message_book_similarity(data, book):
+    return data["Message"].apply(lambda message: compare_message_to_book(message, book))
 
 
 def custom_features_extractor(data):
@@ -177,27 +191,33 @@ def custom_features_extractor(data):
     data["num_of_exclamation_point"] = data["Message"].str.count("\!")
     data["num_of_emoticons"] = data["lemmas"].apply(count_emoticons)
     data["is_url"] = data["Message"].apply(is_url)
-    data['num_nouns'] = data['Message'].apply(lambda x: count_tag_types(x, 'noun'))
-    data['num_verbs'] = data['Message'].apply(lambda x: count_tag_types(x, 'verb'))
-    data['num_adjs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adj'))
-    data['num_advs'] = data['Message'].apply(lambda x: count_tag_types(x, 'adv'))
-    data['num_prons'] = data['Message'].apply(lambda x: count_tag_types(x, 'pron'))
+    data["num_nouns"] = data["Message"].apply(lambda x: count_tag_types(x, "noun"))
+    data["num_verbs"] = data["Message"].apply(lambda x: count_tag_types(x, "verb"))
+    data["num_adjs"] = data["Message"].apply(lambda x: count_tag_types(x, "adj"))
+    data["num_advs"] = data["Message"].apply(lambda x: count_tag_types(x, "adv"))
+    data["num_prons"] = data["Message"].apply(lambda x: count_tag_types(x, "pron"))
 
     book1 = read_book("data/ID260 and ID261 - The Lady or the Tiger.txt")
     book2 = read_book("data/ID264 and ID265 - Just Have Less.txt")
-    book3 = read_book("data/ID266 and ID267 - Design for the Future When the Future Is Bleak.txt")
+    book3 = read_book(
+        "data/ID266 and ID267 - Design for the Future When the Future Is Bleak.txt"
+    )
 
     book1_persons, book1_no_stopwords = get_iob(book1)
     book2_persons, book2_no_stopwords = get_iob(book2)
     book3_persons, book3_no_stopwords = get_iob(book3)
 
-    # data["book1_persons_mentioned"] = person_mentioned(data, book1_persons)
-    # data["book2_persons_mentioned"] = person_mentioned(data, book2_persons)
-    # data["book3_persons_mentioned"] = person_mentioned(data, book3_persons)
+    data["book1_persons_mentioned"] = person_mentioned(data, book1_persons)
+    data["book2_persons_mentioned"] = person_mentioned(data, book2_persons)
+    data["book3_persons_mentioned"] = person_mentioned(data, book3_persons)
 
     data["words_in_book1"] = book_words(data, book1_no_stopwords)
     data["words_in_book2"] = book_words(data, book2_no_stopwords)
     data["words_in_book3"] = book_words(data, book3_no_stopwords)
+
+    data["book1_similarity"] = message_book_similarity(data, book1)
+    data["book2_similarity"] = message_book_similarity(data, book2)
+    data["book3_similarity"] = message_book_similarity(data, book3)
 
     tfidf = tfidf_features(data)
     bow = bag_of_words_features(data)
@@ -205,7 +225,9 @@ def custom_features_extractor(data):
     scaler = MinMaxScaler()
     X_cols = scaler.fit_transform(data[data.columns[14:]])
 
-    X_sparse = sp.hstack([sp.csr_matrix(tfidf), sp.csr_matrix(bow), sp.csr_matrix(X_cols)])
+    X_sparse = sp.hstack(
+        [sp.csr_matrix(tfidf), sp.csr_matrix(bow), sp.csr_matrix(X_cols)]
+    )
 
     return X_sparse
 
