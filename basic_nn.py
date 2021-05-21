@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import Activation, Dense
+from keras.layers import Activation, Dense, Dropout
 from keras.models import Sequential, load_model
 
 # from keras.utils import plot_model
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from tensorflow import keras
 
@@ -37,7 +38,9 @@ class NN:
             )
         elif self.type == "mlp":
             model = keras.Sequential()
-            model.add(Dense(nb_classes * 3, activation="relu", input_shape=(dims,)))
+            model.add(Dense(512, input_shape=(dims,)))
+            model.add(Activation('tanh'))
+            model.add(Dropout(0.5))
             model.add(Dense(17, activation="relu"))
             model.add(Activation("softmax"))
             model.compile(
@@ -139,12 +142,16 @@ class NN:
         early_stop = EarlyStopping(monitor="val_loss", patience=2, verbose=1)
         best_model = ModelCheckpoint(fBestModel, verbose=0, save_best_only=True)
 
+        # X_train, X_val, Y_train, Y_val = train_test_split(
+        #     X_train, Y_train, test_size=0.1, random_state=42, shuffle=True
+        # )
+
         history = self.model.fit(
             X_train,
             Y_train,
             epochs=500,
             batch_size=1024,
-            validation_data=(X_test, Y_test),
+            validation_split=0.1,
             callbacks=[best_model, early_stop],
             verbose=True,
         )
@@ -159,7 +166,7 @@ class NN:
         plt.title("model accuracy")
         plt.ylabel("accuracy")
         plt.xlabel("epoch")
-        plt.legend(["train", "test"], loc="upper left")
+        plt.legend(["train", "validation"], loc="upper left")
         plt.show()
         # summarize history for loss
         plt.plot(history.history["loss"])
@@ -167,7 +174,7 @@ class NN:
         plt.title("model loss")
         plt.ylabel("loss")
         plt.xlabel("epoch")
-        plt.legend(["train", "test"], loc="upper left")
+        plt.legend(["train", "validation"], loc="upper left")
         plt.show()
 
     def load_fitted_model(self, filename):
@@ -259,7 +266,7 @@ if __name__ == "__main__":
     nn.train(X_train, Y_train, save_model=True, filename="model-tfidf")
     # nn.load_fitted_model("./saved_models/model-bg-basic.h5")
     nn.evaluate(X_test, Y_test)
-    nn.plot_model()
+    # nn.plot_model()
 
 # Graphical
 # SVG(model_to_dot(model).create(prog="dot", format="svg"))
