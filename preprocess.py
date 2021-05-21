@@ -15,7 +15,7 @@ nltk.download('words')
 
 def read_crew_data():
     """Read data from csv to pandas dataframe"""
-    df = pd.read_csv("data/crew_data_discussion_only.csv")
+    df = pd.read_csv("data/joined_classes.csv")
     return df
 
 

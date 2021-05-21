@@ -26,13 +26,18 @@ This project implements different ml algorithms for classification.
 
 To test and run models you need to first install requirements:
 
+
 ```shell
 pip install -r requirements.py
 ```
 
 and then run:
-
 ```shell
 python run_models.py
-python basic_nn.py
+```
+for baseline models, advanced models and neural networks .
+
+And for BERT run:
+```shell
+python run_bert.py
 ```

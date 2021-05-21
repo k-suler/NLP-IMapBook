@@ -68,7 +68,7 @@ class CustomIMapModel(tf.keras.Model):
         model_output_classes=2,
         dropout_rate=0.1,
         training=False,
-        name="custom_imdb_model",
+        name="custom_imap_model",
     ):
         super(CustomIMapModel, self).__init__(name=name)
 

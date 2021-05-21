@@ -13,6 +13,48 @@ import scipy.sparse as sp
 import re
 
 
+def bag_of_words_features2(
+    train_data, test_data, val_data, max_features=2000, binary=False
+):
+    """Return features using bag of words"""
+    vectorizer = CountVectorizer(
+        ngram_range=(1, 3), min_df=3, stop_words="english", binary=binary
+    )
+    joined_train_data = train_data["lemmas"].apply(" ".join)
+    joined_test_data = test_data["lemmas"].apply(" ".join)
+    joined_val_data = val_data["lemmas"].apply(" ".join)
+
+    X_train = vectorizer.fit_transform(joined_train_data)
+    X_train = X_train.astype("float16")
+    X_test = vectorizer.transform(joined_test_data)
+    X_test = X_test.astype("float16")
+    X_val = vectorizer.transform(joined_val_data)
+    X_val = X_val.astype("float16")
+    return X_train, X_test, X_val
+
+
+def tfidf_features2(train_data, test_data, val_data, binary=False):
+    """Return features using TFIDF"""
+    joined_train_data = train_data["lemmas"].apply(" ".join)
+    joined_test_data = test_data["lemmas"].apply(" ".join)
+    joined_val_data = val_data["lemmas"].apply(" ".join)
+    vectorizer = TfidfVectorizer(
+        token_pattern=r"\w{1,}",
+        min_df=0.2,
+        max_df=0.8,
+        use_idf=True,
+        binary=binary,
+        ngram_range=(1, 3),
+    )
+    X_train = vectorizer.fit_transform(joined_train_data)
+    X_train = X_train.astype("float16")
+    X_test = vectorizer.transform(joined_test_data)
+    X_test = X_test.astype("float16")
+    X_val = vectorizer.transform(joined_val_data)
+    X_val = X_val.astype("float16")
+    return X_train, X_test, X_val
+
+
 def bag_of_words_features(data, binary=False):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
@@ -22,7 +64,7 @@ def bag_of_words_features(data, binary=False):
     return vectorizer.fit_transform(data["joined_lemmas"])
 
 
-def tfidf_features(data, binary=False):
+def tfidf_features(data, binary=False, return_vectorizer=False):
     """Return features using TFIDF"""
     vectorizer = TfidfVectorizer(
         token_pattern=r"\w{1,}",
@@ -32,6 +74,10 @@ def tfidf_features(data, binary=False):
         binary=binary,
         ngram_range=(1, 3),
     )
+    if return_vectorizer:
+        x = vectorizer.fit_transform(data["joined_lemmas"])
+        return vectorizer, x
+
     return vectorizer.fit_transform(data["joined_lemmas"])
 
 
@@ -59,7 +105,7 @@ def bag_of_words_features_1(
     return X_train, X_test
 
 
-def tfidf_features_1(train_data, test_data, kfold):
+def tfidf_features_1(train_data, test_data, kfold, binary=False):
     """Return features using TFIDF"""
     if not kfold:
         joined_train_data = train_data["lemmas"].apply(" ".join)
@@ -72,6 +118,7 @@ def tfidf_features_1(train_data, test_data, kfold):
         max_features=200000,
         token_pattern=r"\w{1,}",
         use_idf=True,
+        binary=binary,
         sublinear_tf=True,
         ngram_range=(1, 2),
     )

@@ -17,6 +17,8 @@ from feature_extraction import (
     bag_of_words_features_1,
     tfidf_features_1,
     custom_features_extractor,
+    bag_of_words_features2,
+    tfidf_features2,
 )
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
@@ -28,14 +30,15 @@ rm = RandomModel()
 
 
 def custom_features(features, data):
-    X_train, X_test, y_train, y_test = split_train_test(features, x_col="features", y=data[["CodePreliminary"]])
+    X_train, X_test, y_train, y_test = split_train_test(
+        features, x_col="features", y=data[["CodePreliminary"]], stratify=True
+    )
     X_train = X_train.toarray()
     X_test = X_test.toarray()
     print(f"{BLUE} Starting with Naive Bayes classifier {ENDC}")
     nb = Model("Naive Bayes", MultinomialNB())
     nb.evaluate(X_train, y_train, X_test, y_test)
 
-    print(f"{BLUE} Starting with Po Uri {ENDC}")
     nb.kfold(features, data, 'custom')
     # nb.loocv(features, data, 'custom')
 
@@ -48,9 +51,9 @@ def custom_features(features, data):
 
     print(f"{BLUE} Starting with Logistic Regression classifier {ENDC}")
     lg = Model(
-            "Support Vector Machine",
-            LogisticRegression(multi_class="multinomial", max_iter=100, C=1.0 / 0.01),
-        )
+        "Support Vector Machine",
+        LogisticRegression(multi_class="multinomial", max_iter=100, C=1.0 / 0.01),
+    )
     lg.evaluate(X_train, y_train, X_test, y_test)
 
     lg.kfold(features, data, 'custom')
@@ -62,10 +65,61 @@ def custom_features(features, data):
     print(f"{BLUE} Starting with Random classifier {ENDC}")
     rm.evaluate(y_train, y_test)
 
+    print(f"{BLUE} Starting with NN {ENDC}")
+    lb = LabelEncoder()
+    lb.fit(get_classes(data).tolist())
+
+    Y_test_classes = y_test
+    Y_train = lb.transform(y_train["CodePreliminary"].tolist())
+    Y_train = keras.utils.to_categorical(Y_train)
+    Y_test = lb.transform(y_test["CodePreliminary"].tolist())
+    Y_test = keras.utils.to_categorical(Y_test)
+
+    nn = NN("basic", lb)
+
+    nn.train(
+        X_train,
+        Y_train,
+        None,
+        None,
+        validation_split=True,
+        filename="model-custom",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    nn.evaluate(X_test, Y_test, Y_test_classes)
+
+    print(f"{BLUE} Starting with MLP {ENDC}")
+    mlp = NN("mlp", lb)
+    mlp.train(
+        X_train,
+        Y_train,
+        None,
+        None,
+        validation_split=True,
+        filename="model-custom",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    mlp.evaluate(X_test, Y_test, Y_test_classes)
+
+    print(f"{BLUE} Starting with Deep NN {ENDC}")
+    deep = NN("deep", lb)
+    deep.train(
+        X_train,
+        Y_train,
+        None,
+        None,
+        validation_split=True,
+        filename="model-custom",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    deep.evaluate(X_test, Y_test, Y_test_classes)
+
 
 def bow(data):
-    X_train, X_test, y_train, y_test = split_train_test(data, x_col="features", y=data[["CodePreliminary"]])
-    X_train, X_test = bag_of_words_features_1(X_train, X_test, kfold=False)
+    _X_train, _X_test, y_train, y_test = split_train_test(
+        data, x_col="features", y=data[["CodePreliminary"]]
+    )
+    X_train, X_test = bag_of_words_features_1(_X_train, _X_test, kfold=False)
 
     print(f"{BLUE} Starting with Naive Bayes classifier {ENDC}")
     nb = Model("Naive Bayes", MultinomialNB())
@@ -107,32 +161,74 @@ def bow(data):
     print(f"{BLUE} Starting with Random classifier {ENDC}")
     rm.evaluate(y_train, y_test)
 
-    # print(f"{BLUE} Starting with basic nn classifier {ENDC}")
-    # lb = LabelEncoder()
-    # lb.fit(get_classes(data).tolist())
-    # Y_train = lb.transform(y_train["CodePreliminary"].tolist())
-    # Y_train = keras.utils.to_categorical(Y_train)
-    # Y_test = lb.transform(y_test["CodePreliminary"].tolist())
-    # Y_test = keras.utils.to_categorical(Y_test)
-    # nn = NN("basic", lb)
-    # # nn.train(X_train, Y_train, save_model=True, filename="model-tfidf")
-    # nn.load_fitted_model("./saved_models/model-bg-basic.h5")
-    # nn.evaluate(X_test, Y_test)
+    print(f"{BLUE} Starting with NN {ENDC}")
+    X_train, X_test, Y_train, Y_test = split_train_test(
+        data, x_col="features", y=data[["CodePreliminary"]]
+    )
+    X_train, X_val, Y_train, Y_val = split_train_test(
+        X_train, x_col="features", y=Y_train[["CodePreliminary"]]
+    )
 
-    # print(f"{BLUE} Starting with deep nn classifier {ENDC}")
-    # nn.set_type("deep")
-    # nn.load_fitted_model("./saved_models/model-bg-deep.h5")
-    # nn.evaluate(X_test, Y_test)
+    X_train, X_test, X_val = bag_of_words_features2(
+        X_train,
+        X_test,
+        X_val,
+        binary=True,
+    )
+    Y_test_classes = Y_test
 
-    # print(f"{BLUE} Starting with MLP nn classifier {ENDC}")
-    # nn.set_type("mlp")
-    # nn.load_fitted_model("./saved_models/model-bg-mlp.h5")
-    # nn.evaluate(X_test, Y_test)
+    lb = LabelEncoder()
+    lb.fit(get_classes(data).tolist())
+    Y_train = lb.transform(Y_train["CodePreliminary"].tolist())
+    Y_train = keras.utils.to_categorical(Y_train)
+
+    Y_val = lb.transform(Y_val["CodePreliminary"].tolist())
+    Y_val = keras.utils.to_categorical(Y_val)
+
+    Y_test = lb.transform(Y_test["CodePreliminary"].tolist())
+    Y_test = keras.utils.to_categorical(Y_test)
+
+    nn = NN("basic", lb)
+    nn.train(
+        X_train,
+        Y_train,
+        X_val,
+        Y_val,
+        filename="model-bow",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    nn.evaluate(X_test, Y_test, Y_test_classes)
+
+    print(f"{BLUE} Starting with MLP {ENDC}")
+    mlp = NN("mlp", lb)
+    mlp.train(
+        X_train,
+        Y_train,
+        X_val,
+        Y_val,
+        filename="model-bow",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    mlp.evaluate(X_test, Y_test, Y_test_classes)
+
+    print(f"{BLUE} Starting with Deep NN {ENDC}")
+    deep = NN("deep", lb)
+    deep.train(
+        X_train,
+        Y_train,
+        X_val,
+        Y_val,
+        filename="model-bow",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    deep.evaluate(X_test, Y_test, Y_test_classes)
 
 
 def tfidf(data):
-    X_train, X_test, y_train, y_test = split_train_test(data, x_col="features", y=data[["CodePreliminary"]])
-    X_train, X_test = tfidf_features_1(X_train, X_test, kfold=False)
+    _X_train, _X_test, y_train, y_test = split_train_test(
+        data, x_col="features", y=data[["CodePreliminary"]]
+    )
+    X_train, X_test = tfidf_features_1(_X_train, _X_test, kfold=False)
 
     print(f"{BLUE} Starting with Naive Bayes classifier {ENDC}")
     nb = Model("Naive Bayes", MultinomialNB())
@@ -176,27 +272,67 @@ def tfidf(data):
     print(f"{BLUE} Starting with Random classifier {ENDC}")
     rm.evaluate(y_train, y_test)
 
-    # print(f"{BLUE} Starting with basic nn classifier {ENDC}")
-    # lb = LabelEncoder()
-    # lb.fit(get_classes(data).tolist())
-    # Y_train = lb.transform(y_train["CodePreliminary"].tolist())
-    # Y_train = keras.utils.to_categorical(Y_train)
-    # Y_test = lb.transform(y_test["CodePreliminary"].tolist())
-    # Y_test = keras.utils.to_categorical(Y_test)
-    # nn = NN("basic", lb)
-    # # nn.train(X_train, Y_train, save_model=True, filename="model-tfidf")
-    # nn.load_fitted_model("./saved_models/model-tfidf-basic.h5")
-    # nn.evaluate(X_test, Y_test)
+    print(f"{BLUE} Starting with NN {ENDC}")
+    X_train, X_test, Y_train, Y_test = split_train_test(
+        data, x_col="features", y=data[["CodePreliminary"]]
+    )
+    X_train, X_val, Y_train, Y_val = split_train_test(
+        X_train, x_col="features", y=Y_train[["CodePreliminary"]]
+    )
 
-    # print(f"{BLUE} Starting with deep nn classifier {ENDC}")
-    # nn.set_type("deep")
-    # nn.load_fitted_model("./saved_models/model-tfidf-deep.h5")
-    # nn.evaluate(X_test, Y_test)
+    X_train, X_test, X_val = tfidf_features2(
+        X_train,
+        X_test,
+        X_val,
+        binary=True,
+    )
+    Y_test_classes = Y_test
 
-    # print(f"{BLUE} Starting with MLP nn classifier {ENDC}")
-    # nn.set_type("mlp")
-    # nn.load_fitted_model("./saved_models/model-tfidf-mlp.h5")
-    # nn.evaluate(X_test, Y_test)
+    lb = LabelEncoder()
+    lb.fit(get_classes(data).tolist())
+    Y_train = lb.transform(Y_train["CodePreliminary"].tolist())
+    Y_train = keras.utils.to_categorical(Y_train)
+
+    Y_val = lb.transform(Y_val["CodePreliminary"].tolist())
+    Y_val = keras.utils.to_categorical(Y_val)
+
+    Y_test = lb.transform(Y_test["CodePreliminary"].tolist())
+    Y_test = keras.utils.to_categorical(Y_test)
+
+    nn = NN("basic", lb)
+    nn.train(
+        X_train,
+        Y_train,
+        X_val,
+        Y_val,
+        filename="model-tfidf",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    nn.evaluate(X_test, Y_test, Y_test_classes)
+
+    print(f"{BLUE} Starting with MLP {ENDC}")
+    mlp = NN("mlp", lb)
+    mlp.train(
+        X_train,
+        Y_train,
+        X_val,
+        Y_val,
+        filename="model-tfidf",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    mlp.evaluate(X_test, Y_test, Y_test_classes)
+
+    print(f"{BLUE} Starting with Deep NN {ENDC}")
+    deep = NN("deep", lb)
+    deep.train(
+        X_train,
+        Y_train,
+        X_val,
+        Y_val,
+        filename="model-tfidf",
+        nb_classes=len(get_classes(data).tolist()),
+    )
+    deep.evaluate(X_test, Y_test, Y_test_classes)
 
 
 if __name__ == "__main__":

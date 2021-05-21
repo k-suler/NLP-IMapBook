@@ -4,13 +4,18 @@ import pandas as pd
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Activation, Dense, Dropout
 from keras.models import load_model
-from keras.utils import plot_model
+
+# from keras.utils import plot_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from tensorflow import keras
 
 from evaluation import Evaluator
-from feature_extraction import custom_features_extractor
+from feature_extraction import (
+    custom_features_extractor,
+    tfidf_features2,
+    bag_of_words_features2,
+)
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
 
@@ -86,12 +91,16 @@ class NN:
         self,
         X_train,
         Y_train,
+        X_val,
+        Y_val,
         type="deep",
         X_validation=None,
         Y_validation=None,
         save_model=False,
         filename="model",
         nb_classes=None,
+        show_plot=False,
+        validation_split=False,
     ):
 
         if not nb_classes:
@@ -104,41 +113,53 @@ class NN:
         early_stop = EarlyStopping(monitor="val_loss", patience=2, verbose=1)
         best_model = ModelCheckpoint(fBestModel, verbose=0, save_best_only=True)
 
-        history = self.model.fit(
-            X_train,
-            Y_train,
-            epochs=500,
-            batch_size=1024,
-            validation_split=0.1,
-            callbacks=[best_model, early_stop],
-            verbose=True,
-        )
+        if not validation_split:
+            history = self.model.fit(
+                X_train,
+                Y_train,
+                epochs=500,
+                batch_size=1024,
+                validation_data=(X_val, Y_val),
+                callbacks=[best_model, early_stop],
+                verbose=False,
+            )
+        else:
+            history = self.model.fit(
+                X_train,
+                Y_train,
+                epochs=500,
+                batch_size=1024,
+                validation_split=0.1,
+                callbacks=[best_model, early_stop],
+                verbose=False,
+            )
 
         if save_model:
             self.model.save("./saved_models/" + fBestModel)
 
         self.model.summary()
 
-        plt.plot(history.history["accuracy"])
-        plt.plot(history.history["val_accuracy"])
-        plt.title("model accuracy")
-        plt.ylabel("accuracy")
-        plt.xlabel("epoch")
-        plt.legend(["train", "validation"], loc="upper left")
-        plt.show()
-        # summarize history for loss
-        plt.plot(history.history["loss"])
-        plt.plot(history.history["val_loss"])
-        plt.title("model loss")
-        plt.ylabel("loss")
-        plt.xlabel("epoch")
-        plt.legend(["train", "validation"], loc="upper left")
-        plt.show()
+        if show_plot:
+            plt.plot(history.history["accuracy"])
+            plt.plot(history.history["val_accuracy"])
+            plt.title("model accuracy")
+            plt.ylabel("accuracy")
+            plt.xlabel("epoch")
+            plt.legend(["train", "validation"], loc="upper left")
+            plt.show()
+            # summarize history for loss
+            plt.plot(history.history["loss"])
+            plt.plot(history.history["val_loss"])
+            plt.title("model loss")
+            plt.ylabel("loss")
+            plt.xlabel("epoch")
+            plt.legend(["train", "validation"], loc="upper left")
+            plt.show()
 
     def load_fitted_model(self, filename):
         self.model = load_model(filename)
 
-    def evaluate(self, X_test, Y_test):
+    def evaluate(self, X_test, Y_test, Y_test_classes):
         if not self.model:
             raise Exception("Load or fit new model first")
 
@@ -151,66 +172,82 @@ class NN:
             [np.argmax(pred) for pred in predictions_encoded]
         )
         evaluator.accuracy(Y_test_classes, predictions)
-        evaluator.classification_report(Y_test_classes, predictions)
+        # evaluator.classification_report(Y_test_classes, predictions)
         evaluator.confusion_matrix(Y_test_classes, predictions)
 
-    def plot_model(self, show_shapes=False, show_dtype=False):
-        plot_model(
-            self.model,
-            to_file=f"model-{self.type}.png",
-            show_shapes=show_shapes,
-            show_dtype=show_dtype,
-        )
+    # def plot_model(self, show_shapes=False, show_dtype=False):
+    #     plot_model(
+    #         self.model,
+    #         to_file=f"model-{self.type}.png",
+    #         show_shapes=show_shapes,
+    #         show_dtype=show_dtype,
+    #     )
 
-    def plot_model(self, show_shapes=False, show_dtype=False):
-        plot_model(
-            self.model,
-            to_file=f"model-{self.type}.png",
-            show_shapes=show_shapes,
-            show_dtype=show_dtype,
-        )
-
-
-tfidf = TfidfVectorizer(binary=True, stop_words="english", max_df=0.5, min_df=2)
-
-
-def tfidf_features_my(txt, flag):
-    if flag == "train":
-        x = tfidf.fit_transform(txt)
-    else:
-        x = tfidf.transform(txt)
-    x = x.astype("float16")
-    return x
+    # def plot_model(self, show_shapes=False, show_dtype=False):
+    #     plot_model(
+    #         self.model,
+    #         to_file=f"model-{self.type}.png",
+    #         show_shapes=show_shapes,
+    #         show_dtype=show_dtype,
+    #     )
 
 
 if __name__ == "__main__":
 
     data = preprocess_data()
-    features = custom_features_extractor(data)
+    # features = custom_features_extractor(data)
     X_train, X_test, Y_train, Y_test = split_train_test(
-        features, x_col="features", y=data[["CodePreliminary"]]
+        data, x_col="features", y=data[["CodePreliminary"]]
     )
+    X_train, X_val, Y_train, Y_val = split_train_test(
+        X_train, x_col="features", y=Y_train[["CodePreliminary"]]
+    )
+
+    # X_train = X_train.toarray()
+    # X_test = X_test.toarray()
+
     Y_test_classes = Y_test
-    X_train = X_train.toarray()
-    X_test = X_test.toarray()
 
     lb = LabelEncoder()
     lb.fit(get_classes(data).tolist())
     Y_train = lb.transform(Y_train["CodePreliminary"].tolist())
     Y_train = keras.utils.to_categorical(Y_train)
+
+    Y_val = lb.transform(Y_val["CodePreliminary"].tolist())
+    Y_val = keras.utils.to_categorical(Y_val)
+
     Y_test = lb.transform(Y_test["CodePreliminary"].tolist())
     Y_test = keras.utils.to_categorical(Y_test)
 
-    nn = NN("basic", lb)
+    method = 'tfidf'
+    if method == "tfidf":
+        X_train, X_test, X_val = tfidf_features2(
+            X_train,
+            X_test,
+            X_val,
+            binary=True,
+        )
+    elif method == "bow":
+        X_train, X_test = bag_of_words_features2(
+            X_train,
+            X_test,
+            X_val,
+            binary=True,
+        )
+
+    nn = NN("mlp", lb)
     nn.train(
         X_train,
         Y_train,
+        X_val,
+        Y_val,
         save_model=True,
         filename="model-tfidf",
         nb_classes=len(get_classes(data).tolist()),
     )
+    nn.evaluate(X_test, Y_test, Y_test_classes)
+
     # nn.load_fitted_model("./saved_models/model-bg-basic.h5")
-    nn.evaluate(X_test, Y_test)
     # nn.plot_model()
 
 # firstTestExample = X_test[:1]
