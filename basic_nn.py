@@ -91,9 +91,12 @@ class NN:
         Y_validation=None,
         save_model=False,
         filename="model",
+        nb_classes=None,
     ):
 
-        nb_classes = Y_train.shape[1]
+        if not nb_classes:
+            nb_classes = Y_train.shape[1]
+
         dims = X_train.shape[1]
         self.set_train_model(self.type, nb_classes, dims)
 
@@ -198,8 +201,14 @@ if __name__ == "__main__":
     Y_test = lb.transform(Y_test["CodePreliminary"].tolist())
     Y_test = keras.utils.to_categorical(Y_test)
 
-    nn = NN("deep", lb)
-    nn.train(X_train, Y_train, save_model=True, filename="model-tfidf")
+    nn = NN("basic", lb)
+    nn.train(
+        X_train,
+        Y_train,
+        save_model=True,
+        filename="model-tfidf",
+        nb_classes=len(get_classes(data).tolist()),
+    )
     # nn.load_fitted_model("./saved_models/model-bg-basic.h5")
     nn.evaluate(X_test, Y_test)
     # nn.plot_model()
