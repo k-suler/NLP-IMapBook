@@ -1,21 +1,16 @@
-import json
-import pdb
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Activation, Dense, Dropout
-from keras.models import Sequential, load_model
-
-# from keras.utils import plot_model
+from keras.models import load_model
+from keras.utils import plot_model
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from tensorflow import keras
 
 from evaluation import Evaluator
-from feature_extraction import bag_of_words_features, tfidf_features, custom_features_extractor
+from feature_extraction import custom_features_extractor
 from preprocess import preprocess_data
 from utils import get_classes, preprocess_labels, split_train_test
 
@@ -38,24 +33,27 @@ class NN:
             )
         elif self.type == "mlp":
             model = keras.Sequential()
+            # model.add(Dense(nb_classes * 7, activation="relu", input_shape=(dims,)))
             model.add(Dense(512, input_shape=(dims,)))
             model.add(Activation('tanh'))
             model.add(Dropout(0.5))
-            model.add(Dense(17, activation="relu"))
+            model.add(Dense(nb_classes, activation="relu"))
             model.add(Activation("softmax"))
             model.compile(
                 optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
             )
         elif self.type == "deep":
             model = keras.Sequential()
-            model.add(
-                Dense(
-                    nb_classes * 3,
-                    input_shape=(dims,),
-                    # kernel_initializer=keras.initializers.he_normal(seed=1),
-                    activation="relu",
-                )
-            )
+            model.add(Dense(512, input_shape=(dims,)))
+            model.add(Activation('tanh'))
+            # model.add(
+            #     Dense(
+            #         nb_classes * 3,
+            #         input_shape=(dims,),
+            #         # kernel_initializer=keras.initializers.he_normal(seed=1),
+            #         activation="relu",
+            #     )
+            # )
             model.add(keras.layers.Dropout(0.71))
             model.add(
                 keras.layers.Dense(
@@ -77,45 +75,6 @@ class NN:
             model.compile(
                 optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
             )
-        elif self.type == "lstm":
-            model = keras.Sequential()
-            # model.add(
-            #     Dense(
-            #         nb_classes,
-            #         input_shape=(dims,),
-            #         # kernel_initializer=keras.initializers.he_normal(seed=1),
-            #         # activation="relu",
-            #     )
-            # )
-            model.add(
-                keras.layers.LSTM(
-                    nb_classes,
-                    activation="relu",
-                    kernel_initializer="he_normal",
-                    input_shape=(dims, 1),
-                )
-            )
-            model.add(
-                keras.layers.Dense(
-                    10, activation="relu", kernel_initializer="he_normal"
-                )
-            )
-            model.add(
-                keras.layers.Dense(8, activation="relu", kernel_initializer="he_normal")
-            )
-            model.add(
-                keras.layers.Dense(
-                    nb_classes,
-                    kernel_initializer=keras.initializers.RandomNormal(
-                        mean=0.0, stddev=0.05, seed=4
-                    ),
-                    activation="softmax",
-                )
-            )
-
-            model.compile(
-                optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]
-            )
         else:
             raise Exception("Unsupported model type")
         self.model = model
@@ -130,7 +89,7 @@ class NN:
         type="deep",
         X_validation=None,
         Y_validation=None,
-        save_model=True,
+        save_model=False,
         filename="model",
     ):
 
@@ -142,10 +101,6 @@ class NN:
         early_stop = EarlyStopping(monitor="val_loss", patience=2, verbose=1)
         best_model = ModelCheckpoint(fBestModel, verbose=0, save_best_only=True)
 
-        # X_train, X_val, Y_train, Y_val = train_test_split(
-        #     X_train, Y_train, test_size=0.1, random_state=42, shuffle=True
-        # )
-
         history = self.model.fit(
             X_train,
             Y_train,
@@ -156,8 +111,8 @@ class NN:
             verbose=True,
         )
 
-        # if save_model:
-        # self.model.save("./saved_models/" + fBestModel)
+        if save_model:
+            self.model.save("./saved_models/" + fBestModel)
 
         self.model.summary()
 
@@ -196,19 +151,21 @@ class NN:
         evaluator.classification_report(Y_test_classes, predictions)
         evaluator.confusion_matrix(Y_test_classes, predictions)
 
-    # def plot_model(self, show_shapes=False, show_dtype=False):
-    #     plot_model(
-    #         self.model,
-    #         to_file=f"model-{self.type}.png",
-    #         show_shapes=show_shapes,
-    #         show_dtype=show_dtype,
-    #     )def plot_model(self, show_shapes=False, show_dtype=False):
-    #     plot_model(
-    #         self.model,
-    #         to_file=f"model-{self.type}.png",
-    #         show_shapes=show_shapes,
-    #         show_dtype=show_dtype,
-    #     )
+    def plot_model(self, show_shapes=False, show_dtype=False):
+        plot_model(
+            self.model,
+            to_file=f"model-{self.type}.png",
+            show_shapes=show_shapes,
+            show_dtype=show_dtype,
+        )
+
+    def plot_model(self, show_shapes=False, show_dtype=False):
+        plot_model(
+            self.model,
+            to_file=f"model-{self.type}.png",
+            show_shapes=show_shapes,
+            show_dtype=show_dtype,
+        )
 
 
 tfidf = TfidfVectorizer(binary=True, stop_words="english", max_df=0.5, min_df=2)
@@ -225,12 +182,11 @@ def tfidf_features_my(txt, flag):
 
 if __name__ == "__main__":
 
-    # data = preprocess_data()
-    # X_train, X_test, Y_train, Y_test = split_train_test(data, x_col="lemmas")
-
     data = preprocess_data()
     features = custom_features_extractor(data)
-    X_train, X_test, Y_train, Y_test = split_train_test(features, x_col="features", y=data[["CodePreliminary"]])
+    X_train, X_test, Y_train, Y_test = split_train_test(
+        features, x_col="features", y=data[["CodePreliminary"]]
+    )
     Y_test_classes = Y_test
     X_train = X_train.toarray()
     X_test = X_test.toarray()
@@ -242,35 +198,11 @@ if __name__ == "__main__":
     Y_test = lb.transform(Y_test["CodePreliminary"].tolist())
     Y_test = keras.utils.to_categorical(Y_test)
 
-    use_tfidf = True
-    # if use_tfidf:
-    #     # X_train = tfidf_features(X_train["joined_lemmas"].tolist())
-    #     # X_test = tfidf_features(X_test["joined_lemmas"].tolist())
-    #     X_train, X_test = tfidf_features(
-    #         X_train,
-    #         X_test,
-    #         binary=True,
-    #     )
-    #     # X_train = X_train[:, :, None]
-    #     # X_test = X_test[:, :, None]
-    #     # X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
-    #     # X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], 1))
-    # else:
-    #     X_train, X_test = bag_of_words_features(
-    #         X_train,
-    #         X_test,
-    #         binary=True,
-    #     )
-
     nn = NN("deep", lb)
     nn.train(X_train, Y_train, save_model=True, filename="model-tfidf")
     # nn.load_fitted_model("./saved_models/model-bg-basic.h5")
     nn.evaluate(X_test, Y_test)
     # nn.plot_model()
-
-# Graphical
-# SVG(model_to_dot(model).create(prog="dot", format="svg"))
-
 
 # firstTestExample = X_test[:1]
 # prediction = model.predict(firstTestExample)
