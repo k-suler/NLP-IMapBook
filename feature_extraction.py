@@ -36,7 +36,7 @@ def tfidf_features(data, binary=False):
 
 
 def bag_of_words_features_1(
-        train_data, test_data, max_features=2000, binary=False, kfold=False
+    train_data, test_data, max_features=2000, binary=False, kfold=False
 ):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
@@ -112,9 +112,7 @@ def read_book(filename):
 
 def get_iob(rl, name, book_analysis=False):
     tokens = list(
-        filter(
-            lambda token: token not in string.punctuation, word_tokenize(rl)
-        )
+        filter(lambda token: token not in string.punctuation, word_tokenize(rl))
     )
     tagged_tokens = pos_tag(tokens)
     ner_tree = ne_chunk(tagged_tokens)
