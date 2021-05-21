@@ -36,7 +36,7 @@ def tfidf_features(data, binary=False):
 
 
 def bag_of_words_features_1(
-    train_data, test_data, max_features=2000, binary=False, kfold=False
+        train_data, test_data, max_features=2000, binary=False, kfold=False
 ):
     """Return features using bag of words"""
     vectorizer = CountVectorizer(
@@ -110,23 +110,25 @@ def read_book(filename):
         return rl
 
 
-def get_iob(rl):
+def get_iob(rl, name, book_analysis=False):
     tokens = list(
         filter(
-            lambda token: token not in string.punctuation,
-            map(lambda token: token.lower(), word_tokenize(rl)),
+            lambda token: token not in string.punctuation, word_tokenize(rl)
         )
     )
-
-    lemmatizer = nltk.stem.WordNetLemmatizer()
-    lemmas = [lemmatizer.lemmatize(token) for token in tokens]
-    stop = stopwords.words("english")
-    no_stopwords = [item for item in lemmas if item not in stop]
-
     tagged_tokens = pos_tag(tokens)
     ner_tree = ne_chunk(tagged_tokens)
     iob_tagged = tree2conlltags(ner_tree)
     persons = list(filter(lambda x: "PERSON" in x[2], iob_tagged))
+    tokens = list(map(lambda token: str(token).lower(), tokens))
+    lemmatizer = nltk.stem.WordNetLemmatizer()
+    lemmas = [lemmatizer.lemmatize(token) for token in tokens]
+    stop = stopwords.words("english")
+    no_stopwords = [item for item in lemmas if item not in stop]
+    if book_analysis:
+        print(f"{name} length: {len(rl)}")
+        print(f"{name} persons: {len(persons)}")
+        print(f"{name} tokens: {len(tokens)}")
     return persons, no_stopwords
 
 
@@ -140,6 +142,20 @@ def is_person_in_book(message, persons):
 
 def is_word_in_book(message, words):
     return any(list([word in words for word in message]))
+
+
+def contains_upper(message):
+    for char in message:
+        if str(char).isupper():
+            return True
+    return False
+
+
+def contains_number(message):
+    for char in message:
+        if str(char).isnumeric():
+            return True
+    return False
 
 
 def person_mentioned(data, iob):
@@ -180,7 +196,7 @@ def message_book_similarity(data, book):
     return data["Message"].apply(lambda message: compare_message_to_book(message, book))
 
 
-def custom_features_extractor(data):
+def custom_features_extractor(data, book_analysis=False):
     data["message_length"] = data["Message"].apply(len)
     data["longest_word"] = data["lemmas"].apply(max).apply(len)
     data["shortest_word"] = data["lemmas"].apply(min).apply(len)
@@ -188,6 +204,8 @@ def custom_features_extractor(data):
     data["contains_question_marks"] = data["Message"].str.contains("\?").apply(int)
     data["num_of_question_marks"] = data["Message"].str.count("\?")
     data["contains_exclamation_point"] = data["Message"].str.contains("\!").apply(int)
+    data["contains_uppercase"] = data["Message"].apply(contains_upper)
+    data["contains_numbers"] = data["Message"].apply(contains_number)
     data["num_of_exclamation_point"] = data["Message"].str.count("\!")
     data["num_of_emoticons"] = data["lemmas"].apply(count_emoticons)
     data["is_url"] = data["Message"].apply(is_url)
@@ -203,9 +221,27 @@ def custom_features_extractor(data):
         "data/ID266 and ID267 - Design for the Future When the Future Is Bleak.txt"
     )
 
-    book1_persons, book1_no_stopwords = get_iob(book1)
-    book2_persons, book2_no_stopwords = get_iob(book2)
-    book3_persons, book3_no_stopwords = get_iob(book3)
+    book1_persons, book1_no_stopwords = get_iob(book1, "book1", book_analysis)
+    book2_persons, book2_no_stopwords = get_iob(book2, "book2", book_analysis)
+    book3_persons, book3_no_stopwords = get_iob(book3, "book3", book_analysis)
+    if book_analysis:
+        print(f'Book1 nouns:{count_tag_types(book1, "noun")}')
+        print(f'Book1 verbs:{count_tag_types(book1, "verb")}')
+        print(f'Book1 adjectives:{count_tag_types(book1, "adj")}')
+        print(f'Book1 adv:{count_tag_types(book1, "adv")}')
+        print(f'Book1 pronouns:{count_tag_types(book1, "pron")}')
+
+        print(f'Book2 nouns:{count_tag_types(book2, "noun")}')
+        print(f'Book2 verbs:{count_tag_types(book2, "verb")}')
+        print(f'Book2 adjectives:{count_tag_types(book2, "adj")}')
+        print(f'Book2 adv:{count_tag_types(book2, "adv")}')
+        print(f'Book2 pronouns:{count_tag_types(book2, "pron")}')
+
+        print(f'Book3 nouns:{count_tag_types(book3, "noun")}')
+        print(f'Book3 verbs:{count_tag_types(book3, "verb")}')
+        print(f'Book3 adjectives:{count_tag_types(book3, "adj")}')
+        print(f'Book3 adv:{count_tag_types(book3, "adv")}')
+        print(f'Book3 pronouns:{count_tag_types(book3, "pron")}')
 
     data["book1_persons_mentioned"] = person_mentioned(data, book1_persons)
     data["book2_persons_mentioned"] = person_mentioned(data, book2_persons)
@@ -235,4 +271,4 @@ def custom_features_extractor(data):
 if __name__ == "__main__":
     print("Start")
     data = preprocess_data()
-    custom_features_extractor(data)
+    custom_features_extractor(data, book_analysis=True)
