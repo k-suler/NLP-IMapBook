@@ -15,11 +15,16 @@ def get_classes(df):
     return classes
 
 
-def split_train_test(X, x_col="lemmas", y=None, stratify=None, test_size=0.2):
+def split_train_test(X, x_col="lemmas", y=None, stratify=True, test_size=0.2):
     """Split the data to train and test set"""
 
     if y is None:
         y = X[[col_to_predict]]
+
+    if stratify:
+        stratify = y
+    else:
+        stratify = None
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=42, shuffle=True, stratify=stratify
     )
